@@ -3121,19 +3121,24 @@ export default function App() {
                         </div>
 
                         {/* Interactive Laboratory Slots Freezing Panel */}
-                        <div className="bg-slate-900 border border-slate-800/80 p-6 rounded-2xl shadow-xl space-y-5">
-                          <div className="space-y-1">
-                            <h3 className="font-bold text-slate-200 text-sm flex items-center gap-1.5 text-rose-450">
-                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                              <span>Freeze / Disable Time Intervals</span>
-                            </h3>
-                            <p className="text-[10px] text-slate-500">Instantly toggle availability or freeze slots for any upcoming day</p>
+                        <div className="lg:col-span-12 bg-slate-900 border border-slate-800/80 p-6 rounded-2xl shadow-xl space-y-5">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="space-y-1">
+                              <h3 className="font-bold text-slate-200 text-sm flex items-center gap-1.5 text-rose-450">
+                                <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+                                <span>Freeze / Disable Time Intervals</span>
+                              </h3>
+                              <p className="text-[10px] text-slate-500">Instantly toggle availability or freeze slots for any upcoming day</p>
+                            </div>
+                            <span className="w-fit rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                              Slot availability control
+                            </span>
                           </div>
 
-                          <div className="space-y-4 text-xs select-none">
-                            <div className="space-y-1.5">
+                          <div className="grid grid-cols-1 gap-5 text-xs select-none xl:grid-cols-12">
+                            <div className="space-y-1.5 xl:col-span-4">
                               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">1. Choose Date Constraint</label>
-                              <div className="flex flex-col sm:flex-row gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
                                 <button
                                   type="button"
                                   onClick={() => setLockDate('')}
@@ -3154,10 +3159,10 @@ export default function App() {
                               </div>
                             </div>
 
-                            <div className="space-y-2 border-t border-slate-850 pt-3.5">
+                            <div className="space-y-2 border-t border-slate-850 pt-3.5 xl:col-span-8 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
                               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">2. Active Time Slots Selection</label>
                               
-                              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-3">
                                 {[
                                   "08:00 AM - 09:00 AM",
                                   "09:00 AM - 11:00 AM",
@@ -3172,19 +3177,19 @@ export default function App() {
                                     <div
                                       key={slot}
                                       onClick={() => handleToggleFreezeSlot(slotKey)}
-                                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                                      className={`min-h-[78px] p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
                                         isFrozen
                                           ? 'bg-rose-95/10 border-rose-500/30 text-rose-300 shadow-md shadow-rose-950/5'
                                           : 'bg-slate-950 hover:bg-slate-920 border-slate-850 text-slate-350 hover:text-slate-200'
                                       }`}
                                     >
-                                      <div className="space-y-0.5">
+                                      <div className="min-w-0 space-y-0.5">
                                         <p className="font-extrabold text-[11px] font-mono">{slot}</p>
                                         <p className="text-[9px] text-slate-500">
                                           {isFrozen ? '⚠️ Currently Frozen / Saved Unavailable' : '✅ Active & Open for Patient bookings'}
                                         </p>
                                       </div>
-                                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border leading-none ${
+                                      <span className={`shrink-0 px-2 py-0.5 rounded text-[8px] font-black uppercase border leading-none ${
                                         isFrozen
                                           ? 'bg-rose-500/10 border-rose-500 text-rose-400'
                                           : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'

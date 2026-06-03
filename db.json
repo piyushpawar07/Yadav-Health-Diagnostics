@@ -21,11 +21,35 @@
       "resetToken": null,
       "resetTokenExpires": null,
       "role": "patient"
+    },
+    {
+      "id": "u_nldt4xntr",
+      "address": "juhu",
+      "createdAt": "2026-06-03T16:00:45.216Z",
+      "email": "john@gmail.com",
+      "name": "John Doe",
+      "phone": "9898989898",
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "role": "patient"
+    },
+    {
+      "id": "u_7bltljphq",
+      "address": "kadegaon",
+      "createdAt": "2026-06-03T16:10:26.130Z",
+      "email": "user1@gmail.com",
+      "name": "Bhaiya",
+      "phone": "5555444422",
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "role": "patient"
     }
   ],
   "passwords": {
     "u_admin_default": "$2b$10$VtGX7YvNuWD6B0LQ8au1nOS/iib7i2IgQfIaB4voGlRtnC.FyE0c2",
-    "u_patient_default": "$2b$10$W8AdgRvBpJV1gZZ9QIYjOOorWFMJ.tCCXjIb6d0wRYsEoHKDyNKZq"
+    "u_patient_default": "$2b$10$W8AdgRvBpJV1gZZ9QIYjOOorWFMJ.tCCXjIb6d0wRYsEoHKDyNKZq",
+    "u_nldt4xntr": "$2b$10$ky4aSwgzlUVTx00j1ZD.H.dR4bNCiaKgnfhsOEO3eesv/ktb6NykC",
+    "u_7bltljphq": "$2b$10$KX84Gb/z0phujiMJnZwEb.ZSaxMPl/JJ..0oHhiX36e9AgUuv49Y6"
   },
   "tests": [
     {
@@ -112,13 +136,16 @@
   "labInfo": {
     "address": "Shop no 01, Jayagaon Road , Near grampanchyat Aundh, Pin - 415510 ",
     "email": "contactyadavhealth@gmail.com",
-    "frozenSlots": [],
+    "frozenSlots": [
+      "2026-05-05_08:00 AM - 09:00 AM",
+      "2026-06-05_08:00 AM - 09:00 AM"
+    ],
     "googleMapLink": "https://goo.gl/maps/GjR9JTKHwiiP5Cu18?g_st=ac",
     "labName": "Yadav Health Diagnostics",
     "latitude": 17.541625,
     "longitude": 74.330703,
     "openingHours": "Mon - Sat: 08:00 AM - 08:00 PM",
     "phone": "+91 9096968140",
-    "updatedAt": "2026-05-30T10:21:44.625Z"
+    "updatedAt": "2026-06-03T16:13:22.162Z"
   }
 }
