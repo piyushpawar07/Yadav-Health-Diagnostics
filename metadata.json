@@ -1,0 +1,6 @@
+{
+  "name": "Yadav Health Diagnostics",
+  "description": "Comprehensive pathology lab and blood test booking system with secure report access and admin management dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

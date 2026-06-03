@@ -1,0 +1,124 @@
+{
+  "users": [
+    {
+      "id": "u_admin_default",
+      "address": "Dwarka Sector 4, New Delhi",
+      "createdAt": "2026-05-30T10:05:24.477Z",
+      "email": "admin@yadavhealth.com",
+      "name": "Yadav Lab Owner & Admin",
+      "phone": "+91 99999 88888",
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "role": "admin"
+    },
+    {
+      "id": "u_patient_default",
+      "address": "Pocket 3, Sector 12, Dwarka",
+      "createdAt": "2026-05-30T10:05:24.477Z",
+      "email": "patient@yadavhealth.com",
+      "name": "Piya Yadav",
+      "phone": "+91 98111 22233",
+      "resetToken": null,
+      "resetTokenExpires": null,
+      "role": "patient"
+    }
+  ],
+  "passwords": {
+    "u_admin_default": "$2b$10$VtGX7YvNuWD6B0LQ8au1nOS/iib7i2IgQfIaB4voGlRtnC.FyE0c2",
+    "u_patient_default": "$2b$10$W8AdgRvBpJV1gZZ9QIYjOOorWFMJ.tCCXjIb6d0wRYsEoHKDyNKZq"
+  },
+  "tests": [
+    {
+      "id": "t1",
+      "basePrice": 180,
+      "category": "Haematology",
+      "createdAt": "2026-05-30T10:05:24.639Z",
+      "description": "Analyzes red blood cells, white blood cells, haemoglobin, and platelets to detect anemia, infections, or leukemia.",
+      "isActive": true,
+      "preparationInstructions": "No fasting required. Avoid heavy fatty meals before the blood draw.",
+      "reportTime": "12 Hours",
+      "sampleType": "Whole Blood (EDTA)",
+      "sellingPrice": 299,
+      "testName": "Complete Blood Count (CBC)"
+    },
+    {
+      "id": "t2",
+      "basePrice": 250,
+      "category": "Biochemistry",
+      "createdAt": "2026-05-30T10:05:24.639Z",
+      "description": "Measures total cholesterol, LDL, HDL, and triglycerides to estimate cardiovascular risk.",
+      "isActive": true,
+      "preparationInstructions": "Fasting of 10-12 hours is mandatory. Only water is allowed during the fasting period.",
+      "reportTime": "12 Hours",
+      "sampleType": "Serum / Plasma",
+      "sellingPrice": 420,
+      "testName": "Lipid Profile (Cholesterol Panel)"
+    },
+    {
+      "id": "t3",
+      "basePrice": 300,
+      "category": "Hormone & Endocrine",
+      "createdAt": "2026-05-30T10:05:24.639Z",
+      "description": "Evaluates the activity of your thyroid gland to screen for hyperthyroidism or hypothyroidism.",
+      "isActive": true,
+      "preparationInstructions": "Fasting preferred but not mandatory. Morning sample recommended.",
+      "reportTime": "24 Hours",
+      "sampleType": "Serum",
+      "sellingPrice": 550,
+      "testName": "Thyroid Profile (T3, T4, TSH)"
+    },
+    {
+      "id": "t4",
+      "basePrice": 150,
+      "category": "Diabetes Care",
+      "createdAt": "2026-05-30T10:05:24.639Z",
+      "description": "Measures your average blood sugar levels over the past 2 to 3 months to monitor or diagnose Glycemia.",
+      "isActive": true,
+      "preparationInstructions": "No fasting required. Can be done at any time of the day.",
+      "reportTime": "8 Hours",
+      "sampleType": "EDTA Whole Blood",
+      "sellingPrice": 280,
+      "testName": "HbA1c (Glycated Haemoglobin)"
+    },
+    {
+      "id": "t5",
+      "basePrice": 350,
+      "category": "Biochemistry",
+      "createdAt": "2026-05-30T10:05:24.639Z",
+      "description": "Measures enzymes, proteins, and bilirubin levels to check how well your liver is functioning.",
+      "isActive": true,
+      "preparationInstructions": "Fasting of 8-10 hours is recommended before the test.",
+      "reportTime": "24 Hours",
+      "sampleType": "Serum",
+      "sellingPrice": 600,
+      "testName": "Liver Function Test (LFT)"
+    },
+    {
+      "id": "t6",
+      "basePrice": 600,
+      "category": "Vitamins",
+      "createdAt": "2026-05-30T10:05:24.639Z",
+      "description": "Measures concentration of Vitamin D in blood. Essential for healthy bones, immune function, and overall cellular vitality.",
+      "isActive": true,
+      "preparationInstructions": "No fasting required. Morning collection is preferred.",
+      "reportTime": "24 Hours",
+      "sampleType": "Serum",
+      "sellingPrice": 999,
+      "testName": "Vitamin D3 (25-Hydroxy)"
+    }
+  ],
+  "bookings": [],
+  "reports": [],
+  "labInfo": {
+    "address": "Shop no 01, Jayagaon Road , Near grampanchyat Aundh, Pin - 415510 ",
+    "email": "contactyadavhealth@gmail.com",
+    "frozenSlots": [],
+    "googleMapLink": "https://goo.gl/maps/GjR9JTKHwiiP5Cu18?g_st=ac",
+    "labName": "Yadav Health Diagnostics",
+    "latitude": 17.541625,
+    "longitude": 74.330703,
+    "openingHours": "Mon - Sat: 08:00 AM - 08:00 PM",
+    "phone": "+91 9096968140",
+    "updatedAt": "2026-05-30T10:21:44.625Z"
+  }
+}
