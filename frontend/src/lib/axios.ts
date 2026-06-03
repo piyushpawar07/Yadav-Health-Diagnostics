@@ -1,22 +1,6 @@
 import axios from 'axios';
 
-// Get the base API URL from environment variables, defaulting to current origin (same-port hosting)
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (!envUrl) return '';
-  
-  // If we are running in a Cloud dev/production environment (e.g. google Cloud Run) 
-  // but VITE_API_URL is configured to point to local port 5000, ignore it so relative 
-  // paths to the actual active workspace port (3000) are used instead.
-  if (envUrl.includes('localhost:') || envUrl.includes('127.0.0.1:')) {
-    if (typeof window !== 'undefined' && !window.location.host.includes('localhost') && !window.location.host.includes('127.0.0.1')) {
-      return '';
-    }
-  }
-  return envUrl;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://yadav-health-diagnostics.onrender.com';
 
 const axiosClient = axios.create({
   baseURL: API_BASE_URL,
