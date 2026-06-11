@@ -1,4 +1,3 @@
-import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
@@ -148,6 +147,18 @@ export function isMongoConnected(): boolean {
   return isConnected;
 }
 
+export async function readDbAsync(): Promise<LocalDatabase> {
+  if (isConnected) {
+    const remoteDb = await fetchMongoDatabase();
+    if (remoteDb) {
+      _localDbCache = remoteDb;
+      fs.writeFileSync(DB_FILE, JSON.stringify(_localDbCache, null, 2));
+      return _localDbCache;
+    }
+  }
+  return readDb();
+}
+
 // Fetch all collections from MongoDB and construct a LocalDatabase state
 export async function fetchMongoDatabase(): Promise<LocalDatabase | null> {
   if (!isConnected) return null;
@@ -169,13 +180,17 @@ export async function fetchMongoDatabase(): Promise<LocalDatabase | null> {
     // Cast docs to correct type removing mongo internal __v and _id for simplicity
     const cleanDocs = (docs: any[]) => docs.map(({ _id, __v, ...rest }) => rest);
 
+    const normalizedLabInfo = labInfoDoc
+      ? (({ _id, __v, ...rest }) => rest)(labInfoDoc) as LabInfo
+      : DEFAULT_LAB_INFO;
+
     return {
       users: cleanDocs(users) as User[],
       passwords,
       tests: cleanDocs(tests) as BloodTest[],
       bookings: cleanDocs(bookings) as Booking[],
       reports: cleanDocs(reports) as PatientReport[],
-      labInfo: labInfoDoc ? (({ _id, __v, ...rest }) => rest)(labInfoDoc) as LabInfo : null as any,
+      labInfo: normalizedLabInfo,
     };
   } catch (error) {
     console.error('MongoDB: Error fetching items:', error);
@@ -406,7 +421,18 @@ export function readDb(): LocalDatabase {
     return seedDb;
   }
   if (_localDbCache) return _localDbCache;
-  _localDbCache = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+  const fileData = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as Partial<LocalDatabase>;
+  const normalizedData: LocalDatabase = {
+    users: Array.isArray(fileData.users) ? fileData.users : [],
+    passwords: fileData.passwords && typeof fileData.passwords === 'object' ? fileData.passwords : {},
+    tests: Array.isArray(fileData.tests) ? fileData.tests : [],
+    bookings: Array.isArray(fileData.bookings) ? fileData.bookings : [],
+    reports: Array.isArray(fileData.reports) ? fileData.reports : [],
+    labInfo: fileData.labInfo && typeof fileData.labInfo === 'object'
+      ? { ...DEFAULT_LAB_INFO, ...(fileData.labInfo as Partial<LabInfo>), frozenSlots: Array.isArray((fileData.labInfo as any).frozenSlots) ? (fileData.labInfo as any).frozenSlots : [] }
+      : DEFAULT_LAB_INFO,
+  };
+  _localDbCache = normalizedData;
   return _localDbCache!;
 }
 

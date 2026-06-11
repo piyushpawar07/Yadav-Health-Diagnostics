@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { readDb } from '../models/db';
+import { readDbAsync } from '../models/db';
 import { JWT_SECRET } from '../middlewares/authMiddleware';
 
-export const getTests = (req: any, res: any) => {
-  const db = readDb();
+export const getTests = async (req: any, res: any) => {
+  const db = await readDbAsync();
   
   // Extract token if exists to check role
   const authHeader = req.headers['authorization'];
@@ -33,8 +33,8 @@ export const getTests = (req: any, res: any) => {
   res.json({ tests: mappedTests });
 };
 
-export const getTestById = (req: any, res: any) => {
-  const db = readDb();
+export const getTestById = async (req: any, res: any) => {
+  const db = await readDbAsync();
   const test = db.tests.find(t => t.id === req.params.id);
   
   if (!test) {

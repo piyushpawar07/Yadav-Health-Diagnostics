@@ -1928,15 +1928,17 @@ export default function App() {
                           </button>
                           
                           {(() => {
+                            const reportUrl = report.reportFileUrl && report.reportFileUrl !== 'DATA_64_PDF_ENCODED_CLINICAL_VALUES' ? report.reportFileUrl : undefined;
+                            const useOriginal = typeof reportUrl === 'string' && reportUrl.length > 0;
                             const testNames = bookingObj?.tests.map(t => t.testName) || [report.reportFileName.split('_')[0] || 'Blood Diagnostic Panel'];
                             const markers = getBiomarkersForTests(testNames);
                             const htmlContent = getReportHtmlContent(report, bookingObj, markers);
                             return (
                               <a
-                                href={`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`}
-                                download={`${report.patientName}_Pathology_Report_${report.id.slice(0, 5)}.html`}
+                                href={useOriginal ? reportUrl : `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`}
+                                download={useOriginal ? report.reportFileName : `${report.patientName}_Pathology_Report_${report.id.slice(0, 5)}.html`}
                                 className="p-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl transition cursor-pointer"
-                                title="Download compatible HTML report file"
+                                title={useOriginal ? 'Download original uploaded report file' : 'Download compatible HTML report file'}
                               >
                                 <Download className="h-4.5 w-4.5" />
                               </a>

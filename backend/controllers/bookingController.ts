@@ -1,7 +1,7 @@
-import { readDb, writeDb } from '../models/db';
+import { readDbAsync, writeDb } from '../models/db';
 import { Booking } from '../../frontend/src/types';
 
-export const createBooking = (req: any, res: any) => {
+export const createBooking = async (req: any, res: any) => {
   const { tests: testIds, appointmentDate, appointmentTime, visitType } = req.body;
   
   if (!testIds || !Array.isArray(testIds) || testIds.length === 0) {
@@ -12,7 +12,7 @@ export const createBooking = (req: any, res: any) => {
     return res.status(400).json({ error: 'Preferred slot Date and Time are required.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
 
   // Validate slots limit: maximum slots (8-9 AM is 1 slot, other slots are 3 slots)
   const maxSlots = appointmentTime === "08:00 AM - 09:00 AM" ? 1 : 3;
@@ -80,8 +80,8 @@ export const createBooking = (req: any, res: any) => {
   res.status(201).json({ booking: newBooking });
 };
 
-export const getMyBookings = (req: any, res: any) => {
-  const db = readDb();
+export const getMyBookings = async (req: any, res: any) => {
+  const db = await readDbAsync();
   // Fetch bookings belonging strictly to this patient
   const patientBookings = db.bookings.filter(b => b.patientId === req.user.id);
   
@@ -99,13 +99,13 @@ export const getMyBookings = (req: any, res: any) => {
   res.json({ bookings: sanitizedBookings });
 };
 
-export const getSlotsAvailability = (req: any, res: any) => {
+export const getSlotsAvailability = async (req: any, res: any) => {
   const { date } = req.query;
   if (!date) {
     return res.status(400).json({ error: 'Date query parameter is required.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const targetDate = String(date);
   
   const targetBookings = db.bookings.filter(b => b.appointmentDate === targetDate && b.status !== 'cancelled');

@@ -1,19 +1,19 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { readDb, writeDb } from '../models/db';
+import { readDbAsync, writeDb } from '../models/db';
 import { JWT_SECRET } from '../middlewares/authMiddleware';
 import { User } from '../../frontend/src/types';
 import { sendResetEmail } from '../utils/email';
 
-export const register = (req: any, res: any) => {
+export const register = async (req: any, res: any) => {
   const { name, email, password, phone, address } = req.body;
   
   if (!name || !email || !password || !phone) {
     return res.status(400).json({ error: 'Name, email, password, and phone number are required.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const lowercaseEmail = email.toLowerCase().trim();
   const userExists = db.users.find(u => u.email.toLowerCase().trim() === lowercaseEmail);
   
@@ -45,14 +45,14 @@ export const register = (req: any, res: any) => {
   res.status(201).json({ token, user: newUser });
 };
 
-export const login = (req: any, res: any) => {
+export const login = async (req: any, res: any) => {
   const { email, password } = req.body;
   
   if (!email || !password) {
     return res.status(400).json({ error: 'Email/phone and password are required.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const searchStr = email.toLowerCase().trim();
   
   // Find user by email OR by phone number (normalizing spaces, dashes, plus signs)
@@ -99,7 +99,7 @@ export const forgotPassword = async (req: any, res: any) => {
     return res.status(400).json({ error: 'Registered Email Address is required to request a password reset.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const searchStr = emailOrPhone.toLowerCase().trim();
   const user = db.users.find(u => {
     const dbEmail = u.email ? u.email.toLowerCase().trim() : '';
@@ -155,13 +155,13 @@ export const forgotPassword = async (req: any, res: any) => {
   }
 };
 
-export const validateResetToken = (req: any, res: any) => {
+export const validateResetToken = async (req: any, res: any) => {
   const { token } = req.query;
   if (!token) {
     return res.status(400).json({ valid: false, error: 'Token is missing.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find(u => u.resetToken === token);
 
   if (!user) {
@@ -175,14 +175,14 @@ export const validateResetToken = (req: any, res: any) => {
   res.json({ valid: true, email: user.email });
 };
 
-export const resetPassword = (req: any, res: any) => {
+export const resetPassword = async (req: any, res: any) => {
   const { token, newPassword } = req.body;
   
   if (!token || !newPassword) {
     return res.status(400).json({ error: 'Token and new password are required.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const user = db.users.find(u => u.resetToken === token);
 
   if (!user) {
@@ -212,8 +212,8 @@ export const resetPassword = (req: any, res: any) => {
   res.json({ success: true, message: 'Your password has been successfully updated. You can now log in.' });
 };
 
-export const getMe = (req: any, res: any) => {
-  const db = readDb();
+export const getMe = async (req: any, res: any) => {
+  const db = await readDbAsync();
   const user = db.users.find(u => u.id === req.user.id);
   
   if (!user) {

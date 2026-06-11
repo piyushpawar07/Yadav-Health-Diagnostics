@@ -6,6 +6,7 @@ import slotRoutes from './slotRoutes';
 import reportRoutes from './reportRoutes';
 import labRoutes from './labRoutes';
 import adminRoutes from './adminRoutes';
+import { isMongoConnected } from '../models/db';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.get('/test', (req, res) => {
   res.json({
     message: 'Backend server is fully integrated and healthy!',
     timestamp: new Date().toISOString(),
-    databaseConnected: require('../models/db').isMongoConnected()
+    databaseConnected: isMongoConnected()
   });
 });
 

@@ -1,6 +1,6 @@
-import { readDb, DEFAULT_LAB_INFO } from '../models/db';
+import { readDbAsync, DEFAULT_LAB_INFO } from '../models/db';
 
-export const getLabInfo = (req: any, res: any) => {
-  const db = readDb();
+export const getLabInfo = async (req: any, res: any) => {
+  const db = await readDbAsync();
   res.json({ labInfo: db.labInfo || DEFAULT_LAB_INFO });
 };

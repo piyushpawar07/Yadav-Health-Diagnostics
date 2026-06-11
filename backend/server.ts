@@ -10,7 +10,7 @@ import apiRouter from './routes';
 import { initMongoDB } from './models/db';
 
 const app = express();
-const PORT = Number(process.env.PORT || 3000);
+const DEFAULT_PORT = Number(process.env.PORT || 3000);
 
 // Enable Cross-Origin Resource Sharing (CORS)
 app.use(cors());
@@ -40,9 +40,29 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Yadav Labs Server] Express pipeline live on http://0.0.0.0:${PORT}`);
-  });
+  let port = DEFAULT_PORT;
+  const maxAttempts = 5;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const server = app.listen(port, '0.0.0.0', () => {
+          resolve();
+        });
+        server.once('error', reject);
+      });
+      if (port !== DEFAULT_PORT) {
+        console.warn(`[Yadav Labs Server] Default port ${DEFAULT_PORT} in use, listening on fallback port ${port} instead.`);
+      }
+      console.log(`[Yadav Labs Server] Express pipeline live on http://0.0.0.0:${port}`);
+      break;
+    } catch (err: any) {
+      if (err?.code === 'EADDRINUSE') {
+        port += 1;
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 startServer().catch(err => {

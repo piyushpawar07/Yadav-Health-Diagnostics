@@ -1,14 +1,14 @@
-import { readDb, writeDb } from '../models/db';
+import { readDbAsync, writeDb } from '../models/db';
 import { BloodTest, PatientReport, User } from '../../frontend/src/types';
 
-export const createAdminTest = (req: any, res: any) => {
+export const createAdminTest = async (req: any, res: any) => {
   const { testName, category, description, preparationInstructions, basePrice, sellingPrice, sampleType, reportTime } = req.body;
   
   if (!testName || !category || !description || basePrice === undefined || sellingPrice === undefined || !sampleType || !reportTime) {
     return res.status(400).json({ error: 'Missing required blood test specification details.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const newTest: BloodTest = {
     id: 't_' + Math.random().toString(36).substr(2, 9),
     testName,
@@ -28,8 +28,8 @@ export const createAdminTest = (req: any, res: any) => {
   res.status(201).json({ test: newTest });
 };
 
-export const updateAdminTest = (req: any, res: any) => {
-  const db = readDb();
+export const updateAdminTest = async (req: any, res: any) => {
+  const db = await readDbAsync();
   const index = db.tests.findIndex(t => t.id === req.params.id);
   
   if (index === -1) {
@@ -50,8 +50,8 @@ export const updateAdminTest = (req: any, res: any) => {
   res.json({ test: updatedValue });
 };
 
-export const deleteAdminTest = (req: any, res: any) => {
-  const db = readDb();
+export const deleteAdminTest = async (req: any, res: any) => {
+  const db = await readDbAsync();
   const filtered = db.tests.filter(t => t.id !== req.params.id);
   if (filtered.length === db.tests.length) {
     return res.status(404).json({ error: 'Blood test not found' });
@@ -61,18 +61,18 @@ export const deleteAdminTest = (req: any, res: any) => {
   res.json({ success: true, message: 'Test successfully removed from Yadav catalog.' });
 };
 
-export const getAdminBookings = (req: any, res: any) => {
-  const db = readDb();
+export const getAdminBookings = async (req: any, res: any) => {
+  const db = await readDbAsync();
   res.json({ bookings: db.bookings });
 };
 
-export const updateAdminBookingStatus = (req: any, res: any) => {
+export const updateAdminBookingStatus = async (req: any, res: any) => {
   const { status } = req.body;
   if (!status) {
     return res.status(400).json({ error: 'Status is required' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const booking = db.bookings.find(b => b.id === req.params.id);
   
   if (!booking) {
@@ -84,14 +84,14 @@ export const updateAdminBookingStatus = (req: any, res: any) => {
   res.json({ booking });
 };
 
-export const uploadAdminReport = (req: any, res: any) => {
+export const uploadAdminReport = async (req: any, res: any) => {
   const { bookingId, reportFileName, reportFileUrl } = req.body;
   
   if (!bookingId || !reportFileUrl) {
     return res.status(400).json({ error: 'Booking ID and laboratory report file link are required.' });
   }
 
-  const db = readDb();
+  const db = await readDbAsync();
   const booking = db.bookings.find(b => b.id === bookingId);
   
   if (!booking) {
@@ -119,19 +119,19 @@ export const uploadAdminReport = (req: any, res: any) => {
   res.status(201).json({ report: newReport });
 };
 
-export const getAdminReports = (req: any, res: any) => {
-  const db = readDb();
+export const getAdminReports = async (req: any, res: any) => {
+  const db = await readDbAsync();
   res.json({ reports: db.reports });
 };
 
-export const getAdminPatients = (req: any, res: any) => {
-  const db = readDb();
+export const getAdminPatients = async (req: any, res: any) => {
+  const db = await readDbAsync();
   const patientsOnly = db.users.filter(u => u.role === 'patient');
   res.json({ patients: patientsOnly });
 };
 
-export const updateAdminLabInfo = (req: any, res: any) => {
-  const db = readDb();
+export const updateAdminLabInfo = async (req: any, res: any) => {
+  const db = await readDbAsync();
   db.labInfo = {
     ...db.labInfo,
     ...req.body,

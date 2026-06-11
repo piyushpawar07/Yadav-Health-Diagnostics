@@ -201,6 +201,10 @@ export const getBiomarkersForTests = (testNames: string[]): Biomarker[] => {
 export default function ReportViewer({ report, booking, onClose }: ReportViewerProps) {
   const bookedNames = booking?.tests.map(t => t.testName) || [report.reportFileName.split('_')[0] || 'Blood Diagnostic Panel'];
   const markers = getBiomarkersForTests(bookedNames);
+  const reportUrl = report.reportFileUrl && report.reportFileUrl !== 'DATA_64_PDF_ENCODED_CLINICAL_VALUES' ? report.reportFileUrl : undefined;
+  const isPdfReport = typeof reportUrl === 'string' && /^data:application\/pdf|\.pdf($|\?)/i.test(reportUrl);
+  const isImageReport = typeof reportUrl === 'string' && /^data:image\/|\.(png|jpe?g|gif|webp)($|\?)/i.test(reportUrl);
+  const reportFilename = report.reportFileName || `${report.patientName}_Report`;
 
   const handlePrint = () => {
     window.print();
@@ -262,14 +266,15 @@ export default function ReportViewer({ report, booking, onClose }: ReportViewerP
               <span>Save / Print PDF</span>
             </button>
             
-            {/* Generate beautiful self-contained HTML file which is super-compatible on all devices */}
+            {/* Download original report file whenever available; otherwise fallback to generated HTML */}
             <a
-              href={`data:text/html;charset=utf-8,${encodeURIComponent(getReportHtmlContent(report, booking, markers))}`}
-              download={`${report.patientName}_Pathology_Report_${report.id.slice(0, 5)}.html`}
+              href={reportUrl || `data:text/html;charset=utf-8,${encodeURIComponent(getReportHtmlContent(report, booking, markers))}`}
+              download={reportUrl ? reportFilename : `${report.patientName}_Pathology_Report_${report.id.slice(0, 5)}.html`}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/25 text-xs font-bold rounded-xl transition cursor-pointer"
+              title={reportUrl ? 'Download the original uploaded report file' : 'Download a generated HTML summary report'}
             >
               <Download className="h-4 w-4" />
-              <span>Download Report (.html)</span>
+              <span>{reportUrl ? 'Download Original Report' : 'Download Report (.html)'}</span>
             </a>
             
             <button
@@ -281,9 +286,32 @@ export default function ReportViewer({ report, booking, onClose }: ReportViewerP
           </div>
         </div>
 
-        {/* Printable Report Leaflet */}
+        {reportUrl ? (
+          <div className="px-6 pb-6 bg-slate-900 border-b border-slate-800 print:hidden">
+            <div className="mb-4 text-xs uppercase tracking-wide text-slate-500">Original uploaded report preview</div>
+            {isPdfReport ? (
+              <div className="h-[520px] overflow-hidden rounded-3xl border border-slate-700 bg-slate-950">
+                <iframe
+                  src={reportUrl}
+                  title="Report preview"
+                  className="w-full h-full"
+                />
+              </div>
+            ) : isImageReport ? (
+              <img
+                src={reportUrl}
+                alt="Pathology report preview"
+                className="w-full rounded-3xl border border-slate-700 object-contain"
+              />
+            ) : (
+              <div className="rounded-3xl border border-slate-700 bg-slate-950 p-6 text-slate-300 text-sm">
+                Original report is available for download, but cannot be previewed inline in this browser.
+              </div>
+            )}
+          </div>
+        ) : null}
+
         <div id="printable-area" className="p-8 md:p-12 bg-white text-slate-900 print:p-0 min-h-[800px] flex flex-col justify-between font-sans leading-relaxed">
-          
           <div>
             {/* Report Header Logo Section */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-b-2 border-emerald-600 pb-6 gap-4">
