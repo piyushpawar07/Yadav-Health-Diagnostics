@@ -5,6 +5,9 @@ const API_BASE_URL = API_BASE_URL_RAW
   .replace(/\/+$|\s+/g, '')
   .replace(/\/api(?:\/.*)?$/, '');
 
+// Debug: log resolved API base URL at runtime (built into the frontend bundle)
+console.log('API_BASE_URL (resolved):', API_BASE_URL);
+
 const axiosClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {

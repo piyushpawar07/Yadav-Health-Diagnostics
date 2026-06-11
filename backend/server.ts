@@ -12,8 +12,31 @@ import { initMongoDB } from './models/db';
 const app = express();
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
 
-// Enable Cross-Origin Resource Sharing (CORS)
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://yadav-health-diagnostics.netlify.app',
+  process.env.RENDER_FRONTEND_URL,
+  process.env.APP_URL,
+].filter(Boolean);
+
+app.use(
+  cors((req, callback) => {
+    const origin = req.header('Origin');
+    const requestOrigin = origin?.toString() || '';
+    const serverOrigin = `${req.protocol}://${req.get('host')}`;
+
+    const corsOptions = {
+      origin: false,
+      credentials: true,
+    };
+
+    if (!requestOrigin || requestOrigin === serverOrigin || allowedOrigins.includes(requestOrigin)) {
+      corsOptions.origin = true;
+    }
+
+    callback(null, corsOptions);
+  })
+);
 
 app.use(express.json({ limit: '10mb' }));
 
