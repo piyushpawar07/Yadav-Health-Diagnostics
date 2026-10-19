@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { resolve4 } from 'node:dns/promises';
+import { isIP } from 'node:net';
 
 export const sendResetEmail = async (toEmail: string, userName: string, resetUrl: string): Promise<void> => {
   const host = process.env.SMTP_HOST;
@@ -11,8 +13,20 @@ export const sendResetEmail = async (toEmail: string, userName: string, resetUrl
     throw new Error('SMTP credentials are not fully configured in your environment variables. Please check SMTP_HOST, SMTP_USER, and SMTP_PASS settings.');
   }
 
+  // Some hosting environments have no working IPv6 route even when the SMTP
+  // hostname publishes AAAA records. Resolve an IPv4 address explicitly, but
+  // keep the original hostname for TLS certificate verification/SNI.
+  let connectHost = host;
+  if (isIP(host) !== 4) {
+    const ipv4Addresses = await resolve4(host);
+    if (ipv4Addresses.length === 0) {
+      throw new Error(`SMTP host ${host} did not resolve to an IPv4 address.`);
+    }
+    connectHost = ipv4Addresses[0];
+  }
+
   const transporter = nodemailer.createTransport({
-    host,
+    host: connectHost,
     port,
     secure: port === 465,
     auth: {
@@ -20,6 +34,7 @@ export const sendResetEmail = async (toEmail: string, userName: string, resetUrl
       pass,
     },
     tls: {
+      servername: host,
       rejectUnauthorized: false
     }
   });
