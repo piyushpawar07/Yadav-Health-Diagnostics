@@ -3,42 +3,16 @@ import { resolve4 } from 'node:dns/promises';
 import { isIP } from 'node:net';
 
 export const sendResetEmail = async (toEmail: string, userName: string, resetUrl: string): Promise<void> => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const googleRefreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const gmailFrom = process.env.GMAIL_FROM || process.env.SMTP_USER;
+  const resendApiKey = process.env.RESEND_API_KEY;
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const from = process.env.SMTP_FROM || 'noreply@yadavhealth.com';
-
-  if (!host || !user || !pass) {
-    throw new Error('SMTP credentials are not fully configured in your environment variables. Please check SMTP_HOST, SMTP_USER, and SMTP_PASS settings.');
-  }
-
-  // Some hosting environments have no working IPv6 route even when the SMTP
-  // hostname publishes AAAA records. Resolve an IPv4 address explicitly, but
-  // keep the original hostname for TLS certificate verification/SNI.
-  let connectHost = host;
-  if (isIP(host) !== 4) {
-    const ipv4Addresses = await resolve4(host);
-    if (ipv4Addresses.length === 0) {
-      throw new Error(`SMTP host ${host} did not resolve to an IPv4 address.`);
-    }
-    connectHost = ipv4Addresses[0];
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: connectHost,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
-    tls: {
-      servername: host,
-      rejectUnauthorized: false
-    }
-  });
-
   const mailOptions = {
     from: `"Yadav Health Diagnostics" <${from}>`,
     to: toEmail,
@@ -156,6 +130,108 @@ export const sendResetEmail = async (toEmail: string, userName: string, resetUrl
       </html>
     `,
   };
+
+  const hasAnyGoogleOAuthSetting = Boolean(googleClientId || googleClientSecret || googleRefreshToken);
+  if (hasAnyGoogleOAuthSetting) {
+    if (!googleClientId || !googleClientSecret || !googleRefreshToken || !gmailFrom) {
+      throw new Error('Gmail API mail is only partially configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, and GMAIL_FROM.');
+    }
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
+        refresh_token: googleRefreshToken,
+        grant_type: 'refresh_token',
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const tokenBody = await tokenResponse.json() as { access_token?: string; error_description?: string; error?: string };
+    if (!tokenResponse.ok || !tokenBody.access_token) {
+      throw new Error(`Google OAuth token refresh failed: ${tokenBody.error_description || tokenBody.error || tokenResponse.statusText}`);
+    }
+
+    const subject = `=?UTF-8?B?${Buffer.from(mailOptions.subject, 'utf8').toString('base64')}?=`;
+    const mimeMessage = [
+      `From: Yadav Health Diagnostics <${gmailFrom}>`,
+      `To: ${toEmail}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(mailOptions.html, 'utf8').toString('base64'),
+    ].join('\r\n');
+    const raw = Buffer.from(mimeMessage, 'utf8').toString('base64url');
+
+    const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenBody.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!sendResponse.ok) {
+      const errorBody = await sendResponse.text();
+      throw new Error(`Gmail API rejected the message (${sendResponse.status}): ${errorBody.slice(0, 500)}`);
+    }
+    return;
+  }
+
+  // Render's free web services block SMTP ports. Resend's HTTPS API uses port
+  // 443, so it works there without opening SMTP egress.
+  if (resendApiKey) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: mailOptions.from,
+        to: [toEmail],
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Email API rejected the message (${response.status}): ${errorBody.slice(0, 500)}`);
+    }
+    return;
+  }
+
+  if (!host || !user || !pass) {
+    throw new Error('Email is not configured. Set RESEND_API_KEY, or configure SMTP_HOST, SMTP_USER, and SMTP_PASS.');
+  }
+
+  // Some hosts publish AAAA records without providing a usable IPv6 route.
+  // Resolve SMTP to IPv4 explicitly while preserving TLS hostname validation.
+  let connectHost = host;
+  if (isIP(host) !== 4) {
+    const ipv4Addresses = await resolve4(host);
+    if (ipv4Addresses.length === 0) {
+      throw new Error(`SMTP host ${host} did not resolve to an IPv4 address.`);
+    }
+    connectHost = ipv4Addresses[0];
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: connectHost,
+    port,
+    secure: port === 465,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+    auth: { user, pass },
+    tls: { servername: host },
+  });
 
   await transporter.sendMail(mailOptions);
 };
