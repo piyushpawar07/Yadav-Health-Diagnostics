@@ -38,11 +38,21 @@ function PinPicker({ start, onMove }: { start: VisitLocation; onMove: (latitude:
   onMoveRef.current = onMove;
 
   useEffect(() => {
-    const map = L.map(containerRef.current!).setView([start.latitude, start.longitude], 17);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const map = L.map(containerRef.current!, { maxZoom: 19 }).setView([start.latitude, start.longitude], 18);
+    const esriTiles = (service: string, attribution?: string) => L.tileLayer(
+      `https://server.arcgisonline.com/ArcGIS/rest/services/${service}/MapServer/tile/{z}/{y}/{x}`,
+      { maxZoom: 19, maxNativeZoom: 18, attribution }
+    );
+    const satellite = L.layerGroup([
+      esriTiles('World_Imagery', 'Imagery &copy; Esri'),
+      esriTiles('Reference/World_Transportation'),
+      esriTiles('Reference/World_Boundaries_and_Places'),
+    ]).addTo(map);
+    const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    });
+    L.control.layers({ Satellite: satellite, Street: street }, undefined, { collapsed: false }).addTo(map);
 
     const icon = L.icon({ iconUrl: markerIcon, shadowUrl: markerShadow, iconSize: [25, 41], iconAnchor: [12, 41] });
     const marker = L.marker([start.latitude, start.longitude], { draggable: true, icon }).addTo(map);
@@ -175,7 +185,7 @@ export function HomeVisitForm({ details, onChange, labPhone }: HomeVisitFormProp
       {location && (
         <div className="space-y-2">
           <p className="text-xs font-bold text-slate-200">
-            Is the pin on your home? If not, drag it or tap the map to move it. Zoom in to be exact.
+            Find your roof on the map. If the pin is not on it, drag the pin or tap the map to move it.
           </p>
           <div key={captureCount}>
             <PinPicker
@@ -240,7 +250,7 @@ export function VisitDetailsPanel({ phone, address, pincode, landmark, location 
         )}
         {destination && (
           <a
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`}
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&dir_action=navigate`}
             target="_blank"
             rel="noopener noreferrer"
             className={buttonClass}

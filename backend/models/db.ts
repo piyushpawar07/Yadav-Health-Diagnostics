@@ -157,7 +157,11 @@ export function isMongoConnected(): boolean {
   return isConnected;
 }
 
+let pendingMongoSync: Promise<unknown> = Promise.resolve();
+
 export async function readDbAsync(): Promise<LocalDatabase> {
+  // Wait for earlier background saves, so a read never misses data that was just written
+  await pendingMongoSync;
   if (isConnected) {
     const remoteDb = await fetchMongoDatabase();
     if (remoteDb) {
@@ -452,7 +456,7 @@ export function writeDb(data: LocalDatabase) {
   
   if (isMongoConnected()) {
     // Perform async background sync to prevent blocking client responses
-    syncMongoDatabase(data).catch(err => {
+    pendingMongoSync = pendingMongoSync.then(() => syncMongoDatabase(data)).catch(err => {
       console.error('MongoDB: Background sync failed:', err);
     });
   }

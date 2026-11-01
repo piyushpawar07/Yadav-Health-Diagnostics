@@ -269,6 +269,11 @@ export default function App() {
       visitAddress: d.visitAddress || user.address || '',
     }));
   }, [user]);
+
+  // Show current slot availability whenever the patient returns to the booking page
+  useEffect(() => {
+    if (view === 'cart' && appointmentDate) fetchSlotsAvailability(appointmentDate);
+  }, [view]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<Booking | null>(null);
   const [lockDate, setLockDate] = useState<string>('');
@@ -626,12 +631,14 @@ export default function App() {
       const data = res.data;
       setBookingSuccess(data.booking);
       setVisitDetails(d => ({ ...d, visitLocation: null }));
+      setAppointmentTime('');
       setCart([]);
       fetchPatientSpecificData(token);
       setView('bookings');
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || 'Appointment booking failed';
       alert(errMsg);
+      if (appointmentDate) fetchSlotsAvailability(appointmentDate);
     } finally {
       setBookingLoading(false);
     }
@@ -3671,6 +3678,36 @@ export default function App() {
 
         </AnimatePresence>
       </main>
+
+      {/* Booking confirmation popup */}
+      {bookingSuccess && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-950/80 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="booking-success-title" className="w-full max-w-md max-h-full overflow-y-auto bg-slate-900 border border-emerald-500/30 rounded-2xl p-6 text-center shadow-xl">
+            <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto" />
+            <h3 id="booking-success-title" className="mt-3 text-lg font-extrabold text-slate-100">Your Slot Is Booked!</h3>
+            <p className="mt-1 text-xs text-slate-400">Our team will contact you if anything is needed.</p>
+
+            <div className="mt-5 space-y-2 text-left text-xs bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+              <p className="text-slate-300"><span className="text-slate-500">Tests: </span>{bookingSuccess.tests.map(t => t.testName).join(', ')}</p>
+              <p className="text-slate-300"><span className="text-slate-500">Date: </span>{bookingSuccess.appointmentDate}</p>
+              <p className="text-slate-300"><span className="text-slate-500">Time: </span>{bookingSuccess.appointmentTime}</p>
+              <p className="text-slate-300"><span className="text-slate-500">Visit: </span>{bookingSuccess.visitType === 'lab_visit' ? 'Walk-in at the lab' : 'Home sample collection'}</p>
+              {bookingSuccess.visitAddress && (
+                <p className="text-slate-300"><span className="text-slate-500">Address: </span>{bookingSuccess.visitAddress} - {bookingSuccess.visitPincode}</p>
+              )}
+              <p className="text-slate-300"><span className="text-slate-500">Total: </span>₹{bookingSuccess.totalAmount}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setBookingSuccess(null)}
+              className="mt-5 w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl transition cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* DETAIL MODALS & LAB DIALOGS PANEL */}
       <AnimatePresence>

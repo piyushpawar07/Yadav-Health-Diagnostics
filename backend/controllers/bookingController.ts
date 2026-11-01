@@ -40,7 +40,17 @@ const getHomeVisitDetails = (body: any) => {
   };
 };
 
-export const createBooking = async (req: any, res: any) => {
+// Handle bookings one at a time, so simultaneous requests cannot take the same slot
+// or create the same booking twice.
+let bookingQueue: Promise<unknown> = Promise.resolve();
+
+export const createBooking = (req: any, res: any) => {
+  const result = bookingQueue.then(() => processBooking(req, res));
+  bookingQueue = result.catch(() => {});
+  return result;
+};
+
+const processBooking = async (req: any, res: any) => {
   const { tests: testIds, appointmentDate, appointmentTime, visitType } = req.body;
   
   if (!testIds || !Array.isArray(testIds) || testIds.length === 0) {
@@ -57,6 +67,19 @@ export const createBooking = async (req: any, res: any) => {
   }
 
   const db = await readDbAsync();
+
+  const duplicate = db.bookings.find(b =>
+    b.patientId === req.user.id &&
+    b.appointmentDate === appointmentDate &&
+    b.status !== 'cancelled' &&
+    b.tests.some(t => testIds.includes(t.id))
+  );
+  if (duplicate) {
+    const bookedTest = duplicate.tests.find(t => testIds.includes(t.id));
+    return res.status(409).json({
+      error: `You have already booked ${bookedTest?.testName} on ${appointmentDate} (${duplicate.appointmentTime}). You can see it under My Bookings.`
+    });
+  }
 
   // Validate slots limit: maximum slots (8-9 AM is 1 slot, other slots are 3 slots)
   const maxSlots = appointmentTime === "08:00 AM - 09:00 AM" ? 1 : 3;
