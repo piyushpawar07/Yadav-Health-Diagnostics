@@ -148,9 +148,9 @@ export const forgotPassword = async (req: any, res: any) => {
       message: 'A secure password reset link has been sent to your registered email address.'
     });
   } catch (error: any) {
-    console.error('Nodemailer SMTP Error:', error);
+    console.error('Reset email error:', error);
     res.status(500).json({
-      error: `Failed to dispatch reset email via SMTP: ${error.message || error}. Please ensure correct SMTP credentials are set in environment variables.`
+      error: `Failed to send the reset email (${error.message || error}). Please check the email credentials set in environment variables.`
     });
   }
 };

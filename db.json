@@ -51,8 +51,8 @@
       "email": "2310037@ritindia.edu",
       "name": "John Doe",
       "phone": "9607007090",
-      "resetToken": "420d18e0aee95422ae6eadcb07bb0d1a78399ba23705a1a3b864ba35c872088e",
-      "resetTokenExpires": 1792389447475,
+      "resetToken": "eeb6dee2bded5bc2bb5613837642700d73fdefef229285223afcb7476991c227",
+      "resetTokenExpires": 1793517707203,
       "role": "patient"
     }
   ],
@@ -61,7 +61,7 @@
     "u_patient_default": "$2b$10$W8AdgRvBpJV1gZZ9QIYjOOorWFMJ.tCCXjIb6d0wRYsEoHKDyNKZq",
     "u_0x5l8kvmq": "$2b$10$uoeegY..83/R2bzOBugVX.21ql1pBq.FGCAh6.02pi7kbpNfdL55W",
     "u_unkzvj20i": "$2b$10$woPlMUcnYNyZgr6AH9IorehVHNyPgcNZJlnpt0i.aYdCNwy8sDIqu",
-    "u_zw9fwx8rb": "$2b$10$MuiEe/kPxEoGeihcKUYmEeFD0WwxaGizwoTYpZcSGuv.SfLI3IVNi"
+    "u_zw9fwx8rb": "$2b$10$VX2FxpOGPIe8U4JBuIg0UORuEkrcJ2hrnXgCSIyCe1Amgu4ifw2jK"
   },
   "tests": [
     {
@@ -232,7 +232,7 @@
   ],
   "labInfo": {
     "address": "Shop no 01, Jayagaon Road , Near grampanchyat Aundh, Pin - 415510 ",
-    "email": "contactyadavhealth@gmail.com",
+    "email": "yadavhealthdiagnostics@gmail.com",
     "frozenSlots": [
       "2026-05-05_08:00 AM - 09:00 AM",
       "2026-06-05_08:00 AM - 09:00 AM",
@@ -246,6 +246,6 @@
     "longitude": 74.330703,
     "openingHours": "Mon - Sat: 08:00 AM - 08:00 PM",
     "phone": "+91 9096968140",
-    "updatedAt": "2026-06-23T14:03:45.236Z"
+    "updatedAt": "2026-10-19T11:56:33.787Z"
   }
 }

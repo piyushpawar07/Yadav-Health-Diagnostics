@@ -131,107 +131,129 @@ export const sendResetEmail = async (toEmail: string, userName: string, resetUrl
     `,
   };
 
+  // Each method can fail on its own (a Gmail refresh token can expire or be revoked),
+  // so try the next configured method before giving up.
+  const failures: string[] = [];
+  const recordFailure = (method: string, error: any) => {
+    const reason = `${method}: ${error.message || error}`;
+    console.error(`Reset email not sent via ${reason}`);
+    failures.push(reason);
+  };
+
   const hasAnyGoogleOAuthSetting = Boolean(googleClientId || googleClientSecret || googleRefreshToken);
   if (hasAnyGoogleOAuthSetting) {
-    if (!googleClientId || !googleClientSecret || !googleRefreshToken || !gmailFrom) {
-      throw new Error('Gmail API mail is only partially configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, and GMAIL_FROM.');
-    }
+    try {
+      if (!googleClientId || !googleClientSecret || !googleRefreshToken || !gmailFrom) {
+        throw new Error('Gmail API mail is only partially configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, and GMAIL_FROM.');
+      }
 
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: googleClientId,
-        client_secret: googleClientSecret,
-        refresh_token: googleRefreshToken,
-        grant_type: 'refresh_token',
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-    const tokenBody = await tokenResponse.json() as { access_token?: string; error_description?: string; error?: string };
-    if (!tokenResponse.ok || !tokenBody.access_token) {
-      throw new Error(`Google OAuth token refresh failed: ${tokenBody.error_description || tokenBody.error || tokenResponse.statusText}`);
-    }
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: googleClientId,
+          client_secret: googleClientSecret,
+          refresh_token: googleRefreshToken,
+          grant_type: 'refresh_token',
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const tokenBody = await tokenResponse.json() as { access_token?: string; error_description?: string; error?: string };
+      if (!tokenResponse.ok || !tokenBody.access_token) {
+        throw new Error(`Google OAuth token refresh failed: ${tokenBody.error_description || tokenBody.error || tokenResponse.statusText}`);
+      }
 
-    const subject = `=?UTF-8?B?${Buffer.from(mailOptions.subject, 'utf8').toString('base64')}?=`;
-    const mimeMessage = [
-      `From: Yadav Health Diagnostics <${gmailFrom}>`,
-      `To: ${toEmail}`,
-      `Subject: ${subject}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
-      '',
-      Buffer.from(mailOptions.html, 'utf8').toString('base64'),
-    ].join('\r\n');
-    const raw = Buffer.from(mimeMessage, 'utf8').toString('base64url');
+      const subject = `=?UTF-8?B?${Buffer.from(mailOptions.subject, 'utf8').toString('base64')}?=`;
+      const mimeMessage = [
+        `From: Yadav Health Diagnostics <${gmailFrom}>`,
+        `To: ${toEmail}`,
+        `Subject: ${subject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        'Content-Transfer-Encoding: base64',
+        '',
+        Buffer.from(mailOptions.html, 'utf8').toString('base64'),
+      ].join('\r\n');
+      const raw = Buffer.from(mimeMessage, 'utf8').toString('base64url');
 
-    const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${tokenBody.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw }),
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!sendResponse.ok) {
-      const errorBody = await sendResponse.text();
-      throw new Error(`Gmail API rejected the message (${sendResponse.status}): ${errorBody.slice(0, 500)}`);
+      const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tokenBody.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ raw }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!sendResponse.ok) {
+        const errorBody = await sendResponse.text();
+        throw new Error(`Gmail API rejected the message (${sendResponse.status}): ${errorBody.slice(0, 500)}`);
+      }
+      return;
+    } catch (error: any) {
+      recordFailure('Gmail API', error);
     }
-    return;
   }
 
   // Render's free web services block SMTP ports. Resend's HTTPS API uses port
   // 443, so it works there without opening SMTP egress.
   if (resendApiKey) {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: mailOptions.from,
-        to: [toEmail],
-        subject: mailOptions.subject,
-        html: mailOptions.html,
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: mailOptions.from,
+          to: [toEmail],
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Email API rejected the message (${response.status}): ${errorBody.slice(0, 500)}`);
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Email API rejected the message (${response.status}): ${errorBody.slice(0, 500)}`);
+      }
+      return;
+    } catch (error: any) {
+      recordFailure('Resend', error);
     }
-    return;
   }
 
-  if (!host || !user || !pass) {
-    throw new Error('Email is not configured. Set RESEND_API_KEY, or configure SMTP_HOST, SMTP_USER, and SMTP_PASS.');
-  }
+  if (host && user && pass) {
+    try {
+      // Some hosts publish AAAA records without providing a usable IPv6 route.
+      // Resolve SMTP to IPv4 explicitly while preserving TLS hostname validation.
+      let connectHost = host;
+      if (isIP(host) !== 4) {
+        const ipv4Addresses = await resolve4(host);
+        if (ipv4Addresses.length === 0) {
+          throw new Error(`SMTP host ${host} did not resolve to an IPv4 address.`);
+        }
+        connectHost = ipv4Addresses[0];
+      }
 
-  // Some hosts publish AAAA records without providing a usable IPv6 route.
-  // Resolve SMTP to IPv4 explicitly while preserving TLS hostname validation.
-  let connectHost = host;
-  if (isIP(host) !== 4) {
-    const ipv4Addresses = await resolve4(host);
-    if (ipv4Addresses.length === 0) {
-      throw new Error(`SMTP host ${host} did not resolve to an IPv4 address.`);
+      const transporter = nodemailer.createTransport({
+        host: connectHost,
+        port,
+        secure: port === 465,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+        auth: { user, pass },
+        tls: { servername: host },
+      });
+
+      await transporter.sendMail(mailOptions);
+      return;
+    } catch (error: any) {
+      recordFailure('SMTP', error);
     }
-    connectHost = ipv4Addresses[0];
   }
 
-  const transporter = nodemailer.createTransport({
-    host: connectHost,
-    port,
-    secure: port === 465,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
-    auth: { user, pass },
-    tls: { servername: host },
-  });
-
-  await transporter.sendMail(mailOptions);
+  throw new Error(failures.join('; ') || 'Email is not configured. Set RESEND_API_KEY, or configure SMTP_HOST, SMTP_USER, and SMTP_PASS.');
 };
