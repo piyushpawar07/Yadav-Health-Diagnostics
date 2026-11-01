@@ -14,6 +14,7 @@ import LabMap from './components/LabMap';
 import ReportViewer, { getReportHtmlContent, getBiomarkersForTests } from './components/ReportViewer';
 import AdminTestForm from './components/AdminTestForm';
 import LabLogo from './components/LabLogo';
+import { HomeVisitForm, VisitDetailsPanel, VisitDetails } from './components/HomeVisit';
 import axiosClient from './lib/axios';
 
 const parseTimeToMinutes = (timeStr: string): number => {
@@ -257,6 +258,17 @@ export default function App() {
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
   const [visitType, setVisitType] = useState<'home_visit' | 'lab_visit'>('home_visit');
+  const [visitDetails, setVisitDetails] = useState<VisitDetails>({ contactPhone: '', visitAddress: '', visitPincode: '', visitLandmark: '', visitLocation: null });
+
+  // Prefill home visit contact details from the patient's profile
+  useEffect(() => {
+    if (!user) return;
+    setVisitDetails(d => ({
+      ...d,
+      contactPhone: d.contactPhone || user.phone || '',
+      visitAddress: d.visitAddress || user.address || '',
+    }));
+  }, [user]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<Booking | null>(null);
   const [lockDate, setLockDate] = useState<string>('');
@@ -592,17 +604,28 @@ export default function App() {
       }
     }
 
+    if (visitType === 'home_visit' && !visitDetails.visitLocation) {
+      alert('Please tap "Share my current location" so our technician can find you.');
+      return;
+    }
+    if (visitType === 'home_visit' && !visitDetails.visitLocation?.pinConfirmed) {
+      alert('Please check the map and confirm the pin is on the correct place.');
+      return;
+    }
+
     setBookingLoading(true);
     try {
       const res = await axiosClient.post('/api/bookings', {
         tests: cart.map(t => t.id),
         appointmentDate,
         appointmentTime,
-        visitType
+        visitType,
+        ...(visitType === 'home_visit' ? visitDetails : {})
       });
 
       const data = res.data;
       setBookingSuccess(data.booking);
+      setVisitDetails(d => ({ ...d, visitLocation: null }));
       setCart([]);
       fetchPatientSpecificData(token);
       setView('bookings');
@@ -1743,6 +1766,10 @@ export default function App() {
                         </div>
                       </div>
 
+                      {visitType === 'home_visit' && (
+                        <HomeVisitForm details={visitDetails} onChange={setVisitDetails} labPhone={labInfo?.phone} />
+                      )}
+
                       {!token && (
                         <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 rounded-xl flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -2842,6 +2869,18 @@ export default function App() {
                                         }`}>
                                           {bk.visitType === 'lab_visit' ? '🏥 Lab Walk-in' : '🏠 Home collection'}
                                         </span>
+                                        {bk.visitType !== 'lab_visit' && (() => {
+                                          const profile = adminPatients.find(p => p.id === bk.patientId);
+                                          return (
+                                            <VisitDetailsPanel
+                                              phone={bk.contactPhone || profile?.phone}
+                                              address={bk.visitAddress || profile?.address}
+                                              pincode={bk.visitPincode}
+                                              landmark={bk.visitLandmark}
+                                              location={bk.visitLocation}
+                                            />
+                                          );
+                                        })()}
                                       </div>
                                     </td>
                                     <td className="p-4">

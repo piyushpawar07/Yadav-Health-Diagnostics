@@ -51,8 +51,8 @@
       "email": "2310037@ritindia.edu",
       "name": "John Doe",
       "phone": "9607007090",
-      "resetToken": "eeb6dee2bded5bc2bb5613837642700d73fdefef229285223afcb7476991c227",
-      "resetTokenExpires": 1793517707203,
+      "resetToken": null,
+      "resetTokenExpires": null,
       "role": "patient"
     }
   ],
@@ -61,7 +61,7 @@
     "u_patient_default": "$2b$10$W8AdgRvBpJV1gZZ9QIYjOOorWFMJ.tCCXjIb6d0wRYsEoHKDyNKZq",
     "u_0x5l8kvmq": "$2b$10$uoeegY..83/R2bzOBugVX.21ql1pBq.FGCAh6.02pi7kbpNfdL55W",
     "u_unkzvj20i": "$2b$10$woPlMUcnYNyZgr6AH9IorehVHNyPgcNZJlnpt0i.aYdCNwy8sDIqu",
-    "u_zw9fwx8rb": "$2b$10$VX2FxpOGPIe8U4JBuIg0UORuEkrcJ2hrnXgCSIyCe1Amgu4ifw2jK"
+    "u_zw9fwx8rb": "$2b$10$isZRSY14Sp1q1xg5mAE3Z.xuou.sXdrZHChxZYkkVKKSaGRr9YAui"
   },
   "tests": [
     {
@@ -173,7 +173,7 @@
       "patientEmail": "yadavswapnil022@gmail.com",
       "patientId": "u_unkzvj20i",
       "patientName": "Swapnil Yadav",
-      "status": "report_uploaded",
+      "status": "completed",
       "tests": [
         {
           "id": "t1",
@@ -205,6 +205,48 @@
         }
       ],
       "totalAmount": 1549,
+      "visitType": "home_visit"
+    },
+    {
+      "id": "b_c77zup21q",
+      "appointmentDate": "2026-11-01",
+      "appointmentTime": "04:00 PM - 06:00 PM",
+      "createdAt": "2026-11-01T09:33:48.932Z",
+      "patientEmail": "2310037@ritindia.edu",
+      "patientId": "u_zw9fwx8rb",
+      "patientName": "John Doe",
+      "status": "confirmed",
+      "tests": [
+        {
+          "id": "t2",
+          "testName": "Lipid Profile (Cholesterol Panel)",
+          "sellingPrice": 420,
+          "basePrice": 250,
+          "_id": "6ae7077e0de3a109e9886198"
+        }
+      ],
+      "totalAmount": 420,
+      "visitType": "home_visit"
+    },
+    {
+      "id": "b_xz0h3c4vi",
+      "appointmentDate": "2026-11-02",
+      "appointmentTime": "09:00 AM - 11:00 AM",
+      "createdAt": "2026-11-01T10:01:21.512Z",
+      "patientEmail": "2310037@ritindia.edu",
+      "patientId": "u_zw9fwx8rb",
+      "patientName": "John Doe",
+      "status": "confirmed",
+      "tests": [
+        {
+          "id": "t3",
+          "testName": "Thyroid Profile (T3, T4, TSH)",
+          "sellingPrice": 550,
+          "basePrice": 300,
+          "_id": "6ae70df2f7fb9e6fa25d26ef"
+        }
+      ],
+      "totalAmount": 550,
       "visitType": "home_visit"
     }
   ],
@@ -238,7 +280,8 @@
       "2026-06-05_08:00 AM - 09:00 AM",
       "2026-06-24_01:00 PM - 03:00 PM",
       "2026-06-24_04:00 PM - 06:00 PM",
-      "2026-06-24_06:00 PM - 08:00 PM"
+      "2026-06-24_06:00 PM - 08:00 PM",
+      "2026-10-02_08:00 AM - 09:00 AM"
     ],
     "googleMapLink": "https://goo.gl/maps/GjR9JTKHwiiP5Cu18?g_st=ac",
     "labName": "Yadav Health Diagnostics",
@@ -246,6 +289,6 @@
     "longitude": 74.330703,
     "openingHours": "Mon - Sat: 08:00 AM - 08:00 PM",
     "phone": "+91 9096968140",
-    "updatedAt": "2026-10-19T11:56:33.787Z"
+    "updatedAt": "2026-11-01T10:10:34.446Z"
   }
 }

@@ -28,6 +28,13 @@ export interface BloodTest {
 
 export type BookingStatus = 'pending' | 'confirmed' | 'sample_collected' | 'report_uploaded' | 'completed' | 'cancelled';
 
+export interface VisitLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;        // Meters, as reported by the patient's device
+  pinConfirmed?: boolean;  // Patient checked or moved the map pin before booking
+}
+
 export interface Booking {
   id: string;
   patientId: string;
@@ -44,6 +51,11 @@ export interface Booking {
   appointmentTime: string;
   status: BookingStatus;
   visitType?: 'home_visit' | 'lab_visit';
+  contactPhone?: string;   // Home visits only
+  visitAddress?: string;   // Home visits only
+  visitPincode?: string;
+  visitLandmark?: string;
+  visitLocation?: VisitLocation; // Saved once at booking, not tracked afterwards
   createdAt: string;
 }
 

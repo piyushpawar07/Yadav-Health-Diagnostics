@@ -79,6 +79,16 @@ const BookingSchema = new mongoose.Schema({
   appointmentTime: { type: String, required: true },
   status: { type: String, required: true },
   visitType: { type: String, default: 'home_visit' },
+  contactPhone: { type: String },
+  visitAddress: { type: String },
+  visitPincode: { type: String },
+  visitLandmark: { type: String },
+  visitLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    accuracy: { type: Number },
+    pinConfirmed: { type: Boolean },
+  },
   createdAt: { type: String, required: true },
 });
 

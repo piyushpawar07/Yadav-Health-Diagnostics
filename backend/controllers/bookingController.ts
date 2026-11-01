@@ -1,6 +1,45 @@
 import { readDbAsync, writeDb } from '../models/db';
 import { Booking } from '../../frontend/src/types';
 
+const getHomeVisitDetails = (body: any) => {
+  const contactPhone = String(body.contactPhone || '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
+  if (!/^[6-9]\d{9}$/.test(contactPhone)) {
+    return { error: 'Please enter a valid 10-digit mobile number for the home visit.' };
+  }
+
+  const visitAddress = String(body.visitAddress || '').trim();
+  if (visitAddress.length < 10 || visitAddress.length > 300) {
+    return { error: 'Please enter your full address for the home visit.' };
+  }
+
+  const visitPincode = String(body.visitPincode || '').trim();
+  if (!/^[1-9]\d{5}$/.test(visitPincode)) {
+    return { error: 'Please enter a valid 6-digit PIN code for the home visit.' };
+  }
+
+  const { latitude, longitude, accuracy, pinConfirmed } = body.visitLocation || {};
+  const hasValidLocation =
+    typeof latitude === 'number' && Math.abs(latitude) <= 90 &&
+    typeof longitude === 'number' && Math.abs(longitude) <= 180 &&
+    typeof accuracy === 'number' && accuracy >= 0;
+  if (!hasValidLocation) {
+    return { error: 'Please share your current location for the home visit.' };
+  }
+  if (pinConfirmed !== true) {
+    return { error: 'Please confirm the map pin is on the correct place for the home visit.' };
+  }
+
+  return {
+    details: {
+      contactPhone,
+      visitAddress,
+      visitPincode,
+      visitLandmark: String(body.visitLandmark || '').trim().slice(0, 150),
+      visitLocation: { latitude, longitude, accuracy, pinConfirmed },
+    },
+  };
+};
+
 export const createBooking = async (req: any, res: any) => {
   const { tests: testIds, appointmentDate, appointmentTime, visitType } = req.body;
   
@@ -10,6 +49,11 @@ export const createBooking = async (req: any, res: any) => {
   
   if (!appointmentDate || !appointmentTime) {
     return res.status(400).json({ error: 'Preferred slot Date and Time are required.' });
+  }
+
+  const homeVisit = visitType === 'lab_visit' ? null : getHomeVisitDetails(req.body);
+  if (homeVisit?.error) {
+    return res.status(400).json({ error: homeVisit.error });
   }
 
   const db = await readDbAsync();
@@ -71,6 +115,7 @@ export const createBooking = async (req: any, res: any) => {
     appointmentTime,
     status: 'pending',
     visitType: visitType || 'home_visit',
+    ...homeVisit?.details,
     createdAt: new Date().toISOString()
   };
 
