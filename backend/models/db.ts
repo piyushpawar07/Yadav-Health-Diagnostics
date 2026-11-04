@@ -81,6 +81,7 @@ const BookingSchema = new mongoose.Schema({
   visitType: { type: String, default: 'home_visit' },
   contactPhone: { type: String },
   visitAddress: { type: String },
+  visitArea: { type: String },
   visitPincode: { type: String },
   visitLandmark: { type: String },
   visitLocation: {

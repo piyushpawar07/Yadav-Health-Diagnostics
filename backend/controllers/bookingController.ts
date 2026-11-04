@@ -14,6 +14,12 @@ const getHomeVisitDetails = (body: any) => {
     return { error: 'Please enter your full address for the home visit.' };
   }
 
+  // Collapse spaces and line breaks, so the name cannot add fake lines to Telegram alerts
+  const visitArea = String(body.visitArea || '').replace(/\s+/g, ' ').trim();
+  if (visitArea.length < 2 || visitArea.length > 80) {
+    return { error: 'Please enter your village or area name for the home visit.' };
+  }
+
   const visitPincode = String(body.visitPincode || '').trim();
   if (!/^[1-9]\d{5}$/.test(visitPincode)) {
     return { error: 'Please enter a valid 6-digit PIN code for the home visit.' };
@@ -35,6 +41,7 @@ const getHomeVisitDetails = (body: any) => {
     details: {
       contactPhone,
       visitAddress,
+      visitArea,
       visitPincode,
       visitLandmark: String(body.visitLandmark || '').trim().slice(0, 150),
       visitLocation: { latitude, longitude, accuracy, pinConfirmed },

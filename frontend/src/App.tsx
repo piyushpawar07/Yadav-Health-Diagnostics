@@ -273,7 +273,7 @@ export default function App() {
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
   const [visitType, setVisitType] = useState<'home_visit' | 'lab_visit'>('home_visit');
-  const [visitDetails, setVisitDetails] = useState<VisitDetails>({ contactPhone: '', visitAddress: '', visitPincode: '', visitLandmark: '', visitLocation: null });
+  const [visitDetails, setVisitDetails] = useState<VisitDetails>({ contactPhone: '', visitAddress: '', visitArea: '', visitPincode: '', visitLandmark: '', visitLocation: null });
 
   // Prefill home visit contact details from the patient's profile
   useEffect(() => {
@@ -2893,6 +2893,7 @@ export default function App() {
                                             <VisitDetailsPanel
                                               phone={bk.contactPhone || profile?.phone}
                                               address={bk.visitAddress || profile?.address}
+                                              area={bk.visitArea}
                                               pincode={bk.visitPincode}
                                               landmark={bk.visitLandmark}
                                               location={bk.visitLocation}
@@ -3717,7 +3718,7 @@ export default function App() {
               <p className="text-slate-300"><span className="text-slate-500">Time: </span>{bookingSuccess.appointmentTime}</p>
               <p className="text-slate-300"><span className="text-slate-500">Visit: </span>{bookingSuccess.visitType === 'lab_visit' ? 'Walk-in at the lab' : 'Home sample collection'}</p>
               {bookingSuccess.visitAddress && (
-                <p className="text-slate-300"><span className="text-slate-500">Address: </span>{bookingSuccess.visitAddress} - {bookingSuccess.visitPincode}</p>
+                <p className="text-slate-300"><span className="text-slate-500">Address: </span>{bookingSuccess.visitAddress}, {bookingSuccess.visitArea} - {bookingSuccess.visitPincode}</p>
               )}
               <p className="text-slate-300"><span className="text-slate-500">Total: </span>₹{bookingSuccess.totalAmount}</p>
             </div>

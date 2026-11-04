@@ -1,15 +1,19 @@
 import { Booking } from '../../frontend/src/types';
 import { findNearbyVisit } from '../../frontend/src/lib/nearby';
 
-// Telegram is a third party, so alerts must never contain patient details.
+// Telegram is a third party, so alerts share only the area, never patient details.
 // Staff open the dashboard behind the admin login to see them.
 const buildAlertText = (booking: Booking, bookings: Booking[]) => {
-  const newSlot = `New slot: ${booking.appointmentDate}, ${booking.appointmentTime}`;
+  const details = [
+    `New slot: ${booking.appointmentDate}, ${booking.appointmentTime}`,
+    `Area: ${booking.visitArea || 'Not given'}, PIN ${booking.visitPincode || 'not given'}`,
+  ].join('\n');
   const nearby = findNearbyVisit(booking, bookings);
-  if (!nearby) return `🏠 NEW HOME VISIT BOOKING\n${newSlot}`;
+  if (!nearby) return `🏠 NEW HOME VISIT BOOKING\n${details}`;
 
   const closeness = nearby.distanceKm === null ? 'Same PIN code as' : `${nearby.distanceKm.toFixed(1)} km from`;
-  return `📍 NEARBY BOOKING\n${closeness} the ${nearby.visit.appointmentTime} visit\n${newSlot}`;
+  const nearbyArea = nearby.visit.visitArea ? ` in ${nearby.visit.visitArea}` : '';
+  return `📍 NEARBY BOOKING\n${closeness} the ${nearby.visit.appointmentTime} visit${nearbyArea}\n${details}`;
 };
 
 // Never throws: a failed alert must not affect the booking

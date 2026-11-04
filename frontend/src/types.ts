@@ -53,6 +53,7 @@ export interface Booking {
   visitType?: 'home_visit' | 'lab_visit';
   contactPhone?: string;   // Home visits only
   visitAddress?: string;   // Home visits only
+  visitArea?: string;      // Village or area name, shared in Telegram alerts
   visitPincode?: string;
   visitLandmark?: string;
   visitLocation?: VisitLocation; // Saved once at booking, not tracked afterwards

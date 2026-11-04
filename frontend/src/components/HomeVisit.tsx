@@ -10,6 +10,7 @@ import { NearbyVisit } from '../lib/nearby';
 export interface VisitDetails {
   contactPhone: string;
   visitAddress: string;
+  visitArea: string;
   visitPincode: string;
   visitLandmark: string;
   visitLocation: VisitLocation | null;
@@ -141,6 +142,15 @@ export function HomeVisitForm({ details, onChange, labPhone }: HomeVisitFormProp
       />
       <input
         type="text"
+        required
+        maxLength={80}
+        placeholder="Village / area name"
+        value={details.visitArea}
+        onChange={(e) => onChange({ ...details, visitArea: e.target.value })}
+        className={inputClass}
+      />
+      <input
+        type="text"
         inputMode="numeric"
         required
         maxLength={6}
@@ -218,13 +228,14 @@ export function HomeVisitForm({ details, onChange, labPhone }: HomeVisitFormProp
 interface VisitDetailsPanelProps {
   phone?: string;
   address?: string;
+  area?: string;
   pincode?: string;
   landmark?: string;
   location?: VisitLocation;
   nearby?: NearbyVisit | null;
 }
 
-export function VisitDetailsPanel({ phone, address, pincode, landmark, location, nearby }: VisitDetailsPanelProps) {
+export function VisitDetailsPanel({ phone, address, area, pincode, landmark, location, nearby }: VisitDetailsPanelProps) {
   const [showMap, setShowMap] = useState(false);
   const destination = location ? `${location.latitude},${location.longitude}` : address;
   const buttonClass = 'inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 text-[10px] font-bold transition cursor-pointer';
@@ -236,7 +247,7 @@ export function VisitDetailsPanel({ phone, address, pincode, landmark, location,
           <Phone className="h-3 w-3" /> {phone}
         </a>
       )}
-      {address && <p className="text-[10px] text-slate-300 whitespace-normal leading-normal">{address}{pincode && ` - ${pincode}`}</p>}
+      {address && <p className="text-[10px] text-slate-300 whitespace-normal leading-normal">{address}{area && `, ${area}`}{pincode && ` - ${pincode}`}</p>}
       {landmark && <p className="text-[10px] text-slate-500 whitespace-normal">Near: {landmark}</p>}
       {!location && <p className="text-[10px] text-amber-400">No GPS location shared with this booking.</p>}
       {nearby && (
