@@ -16,6 +16,8 @@ import AdminTestForm from './components/AdminTestForm';
 import LabLogo from './components/LabLogo';
 import { HomeVisitForm, VisitDetailsPanel, VisitDetails } from './components/HomeVisit';
 import axiosClient from './lib/axios';
+import { SLOT_TIMES, MAX_SLOT_CAPACITY, getSlotCapacity } from './lib/slots';
+import { findNearbyVisit } from './lib/nearby';
 
 const parseTimeToMinutes = (timeStr: string): number => {
   try {
@@ -249,6 +251,19 @@ export default function App() {
     } catch (err: any) {
       const errMsg = err.response?.data?.error || 'Failed to update frozen slots';
       alert(errMsg);
+    }
+  };
+
+  const handleSetSlotCapacity = async (slotKey: string, capacity: number) => {
+    if (!labInfo) return;
+    try {
+      const res = await axiosClient.put('/api/admin/lab-info', {
+        ...labInfo,
+        slotCapacities: { ...labInfo.slotCapacities, [slotKey]: capacity }
+      });
+      setLabInfo(res.data.labInfo);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to update slots');
     }
   };
 
@@ -1647,14 +1662,10 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            {(slotsAvailability.length > 0 ? slotsAvailability : [
-                              { timeSlot: "08:00 AM - 09:00 AM", bookedCount: 0, maxSlots: 1, remainingSlots: 1 },
-                              { timeSlot: "09:00 AM - 11:00 AM", bookedCount: 0, maxSlots: 3, remainingSlots: 3 },
-                              { timeSlot: "11:00 AM - 01:00 PM", bookedCount: 0, maxSlots: 3, remainingSlots: 3 },
-                              { timeSlot: "01:00 PM - 03:00 PM", bookedCount: 0, maxSlots: 3, remainingSlots: 3 },
-                              { timeSlot: "04:00 PM - 06:00 PM", bookedCount: 0, maxSlots: 3, remainingSlots: 3 },
-                              { timeSlot: "06:00 PM - 08:00 PM", bookedCount: 0, maxSlots: 3, remainingSlots: 3 }
-                            ]).map((sl, index) => {
+                            {(slotsAvailability.length > 0 ? slotsAvailability : SLOT_TIMES.map(timeSlot => {
+                              const maxSlots = getSlotCapacity(labInfo, appointmentDate, timeSlot);
+                              return { timeSlot, bookedCount: 0, maxSlots, remainingSlots: maxSlots };
+                            })).map((sl, index) => {
                               const isFrozen = !!(sl.isFrozen || (labInfo?.frozenSlots && (labInfo.frozenSlots.includes(`${appointmentDate}_${sl.timeSlot}`) || labInfo.frozenSlots.includes(sl.timeSlot))));
                               const isSoldOut = sl.remainingSlots === 0 || isFrozen;
                               const isSelected = appointmentTime === sl.timeSlot;
@@ -2846,7 +2857,7 @@ export default function App() {
                         <div className="lg:col-span-8 bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xl space-y-4">
                           <div className="px-6 py-4 bg-slate-950/40 border-b border-slate-850 flex items-center justify-between">
                             <h3 className="font-bold text-slate-200 text-sm">Laboratory Slots Tracker & Workflow Management</h3>
-                            <span className="text-[10px] text-slate-500 font-mono">Max limit: 3/slot daily (8-9 AM: 1)</span>
+                            <span className="text-[10px] text-slate-500 font-mono">Slot limits: set in the panel below</span>
                           </div>
 
                           <div className="overflow-x-auto text-xs text-slate-350">
@@ -2885,6 +2896,7 @@ export default function App() {
                                               pincode={bk.visitPincode}
                                               landmark={bk.visitLandmark}
                                               location={bk.visitLocation}
+                                              nearby={findNearbyVisit(bk, adminBookings)}
                                             />
                                           );
                                         })()}
@@ -2906,7 +2918,7 @@ export default function App() {
                                                b.status !== 'cancelled'
                                         );
                                         const countBooked = sameDayAndSlotBookings.length;
-                                        const maxLimit = bk.appointmentTime === "08:00 AM - 09:00 AM" ? 1 : 3;
+                                        const maxLimit = getSlotCapacity(labInfo, bk.appointmentDate, bk.appointmentTime);
                                         const remainingSlots = Math.max(0, maxLimit - countBooked);
                                         return (
                                           <div className="mt-1.5 flex items-center gap-1.5 select-none">
@@ -2955,7 +2967,7 @@ export default function App() {
                                                      b.status !== 'cancelled'
                                               );
                                               const countBooked = sameDayAndSlotBookings.length;
-                                              const remainingSlots = Math.max(0, (bk.appointmentTime === "08:00 AM - 09:00 AM" ? 1 : 3) - countBooked);
+                                              const remainingSlots = Math.max(0, getSlotCapacity(labInfo, bk.appointmentDate, bk.appointmentTime) - countBooked);
                                               return (
                                                 <div className={`px-1.5 py-0.5 rounded text-[9px] font-bold border leading-tight ${
                                                   remainingSlots === 0 
@@ -3174,9 +3186,9 @@ export default function App() {
                             <div className="space-y-1">
                               <h3 className="font-bold text-slate-200 text-sm flex items-center gap-1.5 text-rose-450">
                                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                                <span>Freeze / Disable Time Intervals</span>
+                                <span>Set Slots / Freeze Time Intervals</span>
                               </h3>
-                              <p className="text-[10px] text-slate-500">Instantly toggle availability or freeze slots for any upcoming day</p>
+                              <p className="text-[10px] text-slate-500">Use - and + to change how many patients each time slot accepts. Tap a slot to freeze it.</p>
                             </div>
                             <span className="w-fit rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">
                               Slot availability control
@@ -3211,16 +3223,10 @@ export default function App() {
                               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">2. Active Time Slots Selection</label>
                               
                               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-3">
-                                {[
-                                  "08:00 AM - 09:00 AM",
-                                  "09:00 AM - 11:00 AM",
-                                  "11:00 AM - 01:00 PM",
-                                  "01:00 PM - 03:00 PM",
-                                  "04:00 PM - 06:00 PM",
-                                  "06:00 PM - 08:00 PM"
-                                ].map((slot) => {
+                                {SLOT_TIMES.map((slot) => {
                                   const slotKey = lockDate ? `${lockDate}_${slot}` : slot;
                                   const isFrozen = !!(labInfo?.frozenSlots && labInfo.frozenSlots.includes(slotKey));
+                                  const capacity = getSlotCapacity(labInfo, lockDate, slot);
                                   return (
                                     <div
                                       key={slot}
@@ -3236,6 +3242,24 @@ export default function App() {
                                         <p className="text-[9px] text-slate-500">
                                           {isFrozen ? '⚠️ Currently Frozen / Saved Unavailable' : '✅ Active & Open for Patient bookings'}
                                         </p>
+                                        <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 pt-1.5 cursor-default">
+                                          <span className="text-[10px] font-bold text-slate-400">Slots:</span>
+                                          <button
+                                            type="button"
+                                            aria-label={`Decrease slots for ${slot}`}
+                                            disabled={capacity <= 1}
+                                            onClick={() => handleSetSlotCapacity(slotKey, capacity - 1)}
+                                            className="h-6 w-6 rounded-md border border-slate-700 bg-slate-900 text-slate-200 font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                          >-</button>
+                                          <span className="min-w-5 text-center font-mono font-bold text-sm text-emerald-400">{capacity}</span>
+                                          <button
+                                            type="button"
+                                            aria-label={`Increase slots for ${slot}`}
+                                            disabled={capacity >= MAX_SLOT_CAPACITY}
+                                            onClick={() => handleSetSlotCapacity(slotKey, capacity + 1)}
+                                            className="h-6 w-6 rounded-md border border-slate-700 bg-slate-900 text-slate-200 font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                          >+</button>
+                                        </div>
                                       </div>
                                       <span className={`shrink-0 px-2 py-0.5 rounded text-[8px] font-black uppercase border leading-none ${
                                         isFrozen

@@ -1,3 +1,4 @@
+import { MAX_SLOT_CAPACITY } from '../../frontend/src/lib/slots';
 import { readDbAsync, writeDb } from '../models/db';
 import { BloodTest, PatientReport, User } from '../../frontend/src/types';
 
@@ -131,6 +132,16 @@ export const getAdminPatients = async (req: any, res: any) => {
 };
 
 export const updateAdminLabInfo = async (req: any, res: any) => {
+  const capacities = req.body.slotCapacities;
+  if (capacities !== undefined) {
+    const isValid = capacities && typeof capacities === 'object' && Object.values(capacities).every(
+      (c: any) => Number.isInteger(c) && c >= 1 && c <= MAX_SLOT_CAPACITY
+    );
+    if (!isValid) {
+      return res.status(400).json({ error: `Slots must be a whole number from 1 to ${MAX_SLOT_CAPACITY}.` });
+    }
+  }
+
   const db = await readDbAsync();
   db.labInfo = {
     ...db.labInfo,

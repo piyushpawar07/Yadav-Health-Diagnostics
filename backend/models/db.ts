@@ -114,6 +114,7 @@ const LabInfoSchema = new mongoose.Schema({
   longitude: { type: Number, required: true },
   updatedAt: { type: String, required: true },
   frozenSlots: { type: [String], default: [] },
+  slotCapacities: { type: mongoose.Schema.Types.Mixed, default: {} },
 });
 
 // 2. MODELS (compiled or reused)

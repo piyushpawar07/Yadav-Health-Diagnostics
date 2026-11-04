@@ -5,6 +5,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { MapPin, Phone, Navigation, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { VisitLocation } from '../types';
+import { NearbyVisit } from '../lib/nearby';
 
 export interface VisitDetails {
   contactPhone: string;
@@ -220,9 +221,10 @@ interface VisitDetailsPanelProps {
   pincode?: string;
   landmark?: string;
   location?: VisitLocation;
+  nearby?: NearbyVisit | null;
 }
 
-export function VisitDetailsPanel({ phone, address, pincode, landmark, location }: VisitDetailsPanelProps) {
+export function VisitDetailsPanel({ phone, address, pincode, landmark, location, nearby }: VisitDetailsPanelProps) {
   const [showMap, setShowMap] = useState(false);
   const destination = location ? `${location.latitude},${location.longitude}` : address;
   const buttonClass = 'inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20 text-[10px] font-bold transition cursor-pointer';
@@ -237,6 +239,11 @@ export function VisitDetailsPanel({ phone, address, pincode, landmark, location 
       {address && <p className="text-[10px] text-slate-300 whitespace-normal leading-normal">{address}{pincode && ` - ${pincode}`}</p>}
       {landmark && <p className="text-[10px] text-slate-500 whitespace-normal">Near: {landmark}</p>}
       {!location && <p className="text-[10px] text-amber-400">No GPS location shared with this booking.</p>}
+      {nearby && (
+        <p className="text-[10px] font-bold text-sky-400 whitespace-normal leading-normal">
+          📍 Nearby: {nearby.distanceKm === null ? 'same PIN code as' : `${nearby.distanceKm.toFixed(1)} km from`} {nearby.visit.patientName}'s visit ({nearby.visit.appointmentTime})
+        </p>
+      )}
       {location?.pinConfirmed && <p className="text-[10px] text-emerald-400">Pin confirmed by patient.</p>}
       {location && !location.pinConfirmed && location.accuracy > LOW_ACCURACY_METERS && (
         <p className="text-[10px] text-amber-400">GPS is approximate (about {location.accuracy} m). Call to confirm.</p>

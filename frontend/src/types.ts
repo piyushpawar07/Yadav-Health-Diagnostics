@@ -81,4 +81,5 @@ export interface LabInfo {
   longitude: number;
   updatedAt: string;
   frozenSlots?: string[];
+  slotCapacities?: Record<string, number>; // Keyed like frozenSlots: "time" or "date_time"
 }

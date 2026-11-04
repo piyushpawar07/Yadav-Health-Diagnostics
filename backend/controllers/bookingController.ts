@@ -1,5 +1,7 @@
 import { readDbAsync, writeDb } from '../models/db';
 import { Booking } from '../../frontend/src/types';
+import { SLOT_TIMES, getSlotCapacity } from '../../frontend/src/lib/slots';
+import { sendHomeVisitAlert } from '../utils/telegram';
 
 const getHomeVisitDetails = (body: any) => {
   const contactPhone = String(body.contactPhone || '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
@@ -81,8 +83,8 @@ const processBooking = async (req: any, res: any) => {
     });
   }
 
-  // Validate slots limit: maximum slots (8-9 AM is 1 slot, other slots are 3 slots)
-  const maxSlots = appointmentTime === "08:00 AM - 09:00 AM" ? 1 : 3;
+  // Validate slots limit set by the admin
+  const maxSlots = getSlotCapacity(db.labInfo, appointmentDate, appointmentTime);
   const isFrozen = !!(db.labInfo.frozenSlots && (db.labInfo.frozenSlots.includes(`${appointmentDate}_${appointmentTime}`) || db.labInfo.frozenSlots.includes(appointmentTime)));
   if (isFrozen) {
     return res.status(400).json({
@@ -146,6 +148,10 @@ const processBooking = async (req: any, res: any) => {
   writeDb(db);
 
   res.status(201).json({ booking: newBooking });
+
+  if (homeVisit) {
+    sendHomeVisitAlert(newBooking, db.bookings);
+  }
 };
 
 export const getMyBookings = async (req: any, res: any) => {
@@ -178,18 +184,9 @@ export const getSlotsAvailability = async (req: any, res: any) => {
   
   const targetBookings = db.bookings.filter(b => b.appointmentDate === targetDate && b.status !== 'cancelled');
   
-  const standardTimeSlots = [
-    "08:00 AM - 09:00 AM",
-    "09:00 AM - 11:00 AM",
-    "11:00 AM - 01:00 PM",
-    "01:00 PM - 03:00 PM",
-    "04:00 PM - 06:00 PM",
-    "06:00 PM - 08:00 PM"
-  ];
-
-  const slotsAvailability = standardTimeSlots.map(time => {
+  const slotsAvailability = SLOT_TIMES.map(time => {
     const bookedCount = targetBookings.filter(b => b.appointmentTime === time).length;
-    const maxSlots = time === "08:00 AM - 09:00 AM" ? 1 : 3;
+    const maxSlots = getSlotCapacity(db.labInfo, targetDate, time);
     const isFrozen = !!(db.labInfo.frozenSlots && (db.labInfo.frozenSlots.includes(`${targetDate}_${time}`) || db.labInfo.frozenSlots.includes(time)));
     const remaining = isFrozen ? 0 : Math.max(0, maxSlots - bookedCount);
     return {
