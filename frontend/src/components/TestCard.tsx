@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlaskConical, Clock, Heart, ShoppingCart, Check } from 'lucide-react';
 import { BloodTest } from '../types';
+import PriceTag from './PriceTag';
 
 interface TestCardProps {
   key?: React.Key;
@@ -49,8 +50,8 @@ export default function TestCard({ test, onAddToCart, isAddedToCart, onViewDetai
       <div className="mt-5 pt-4 border-t border-slate-850 flex items-center justify-between gap-3">
         <div>
           <span className="text-[10px] text-slate-500 uppercase tracking-wider block leading-none">Diagnostic Cost</span>
-          <span className="text-xl font-black text-emerald-400 inline-flex items-baseline mt-0.5 font-mono">
-            ₹{test.sellingPrice.toLocaleString('en-IN')}
+          <span className="inline-flex items-baseline mt-0.5">
+            <PriceTag pricing={test.pricing} price={test.sellingPrice} />
           </span>
         </div>
 

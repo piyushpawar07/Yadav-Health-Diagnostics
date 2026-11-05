@@ -6,6 +6,7 @@ import slotRoutes from './slotRoutes';
 import reportRoutes from './reportRoutes';
 import labRoutes from './labRoutes';
 import adminRoutes from './adminRoutes';
+import offerRoutes from './offerRoutes';
 import { isMongoConnected } from '../models/db';
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use('/slots', slotRoutes);
 router.use('/reports', reportRoutes);
 router.use('/lab-info', labRoutes);
 router.use('/admin', adminRoutes);
+router.use('/offers', offerRoutes);
 
 // Sample test route
 router.get('/test', (req, res) => {

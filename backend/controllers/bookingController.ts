@@ -2,6 +2,8 @@ import { readDbAsync, writeDb } from '../models/db';
 import { Booking } from '../../frontend/src/types';
 import { SLOT_TIMES, getSlotCapacity } from '../../frontend/src/lib/slots';
 import { sendHomeVisitAlert } from '../utils/telegram';
+import { getActiveOffer } from '../services/offerService';
+import { getTestPricing } from '../../frontend/src/lib/offers';
 
 const getHomeVisitDetails = (body: any) => {
   const contactPhone = String(body.contactPhone || '').replace(/\D/g, '').replace(/^(91|0)(?=\d{10}$)/, '');
@@ -111,22 +113,25 @@ const processBooking = async (req: any, res: any) => {
     });
   }
   
-  // Resolve tests and calculate total
-  const resolvedTests: { id: string; testName: string; sellingPrice: number; basePrice?: number }[] = [];
+  // Resolve tests and calculate total. Prices always come from the server, never the request.
+  const resolvedTests: Booking['tests'] = [];
   let totalAmount = 0;
+  const offer = getActiveOffer(db);
 
   for (const tid of testIds) {
     const realTest = db.tests.find(t => t.id === tid && t.isActive);
     if (!realTest) {
       return res.status(400).json({ error: `Selected test with ID ${tid} is unavailable.` });
     }
+    const pricing = getTestPricing(realTest.id, realTest.sellingPrice, offer);
     resolvedTests.push({
       id: realTest.id,
       testName: realTest.testName,
-      sellingPrice: realTest.sellingPrice,
-      basePrice: realTest.basePrice // Admin can query this inside bookings, but user won't get it in patient router response
+      sellingPrice: pricing.finalPrice,
+      basePrice: realTest.basePrice, // Admin can query this inside bookings, but user won't get it in patient router response
+      ...(pricing.discountPercent > 0 && { originalPrice: pricing.originalPrice, discountPercent: pricing.discountPercent })
     });
-    totalAmount += realTest.sellingPrice;
+    totalAmount += pricing.finalPrice;
   }
 
   const bookingId = 'b_' + Math.random().toString(36).substr(2, 9);
@@ -148,6 +153,7 @@ const processBooking = async (req: any, res: any) => {
     status: 'pending',
     visitType: visitType || 'home_visit',
     ...homeVisit?.details,
+    ...(offer && resolvedTests.some(t => t.discountPercent) && { offerName: offer.name }),
     createdAt: new Date().toISOString()
   };
 

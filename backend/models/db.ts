@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
-import { User, BloodTest, Booking, PatientReport, LabInfo } from '../../frontend/src/types';
+import { User, BloodTest, Booking, PatientReport, LabInfo, FestivalOffer } from '../../frontend/src/types';
 
 export interface LocalDatabase {
   users: User[];
@@ -11,9 +11,12 @@ export interface LocalDatabase {
   bookings: Booking[];
   reports: PatientReport[];
   labInfo: LabInfo;
+  offer: FestivalOffer | null; // At most one festival offer at a time
 }
 
 const DB_FILE = path.join(process.cwd(), 'db.json');
+// Used only when MongoDB is not configured
+const OFFER_POSTER_FILE = path.join(process.cwd(), 'offer-poster.json');
 
 export const DEFAULT_LAB_INFO: LabInfo = {
   labName: 'Yadav Health Diagnostics',
@@ -73,7 +76,10 @@ const BookingSchema = new mongoose.Schema({
     testName: { type: String, required: true },
     sellingPrice: { type: Number, required: true },
     basePrice: { type: Number },
+    originalPrice: { type: Number },
+    discountPercent: { type: Number },
   }],
+  offerName: { type: String },
   totalAmount: { type: Number, required: true },
   appointmentDate: { type: String, required: true },
   appointmentTime: { type: String, required: true },
@@ -118,6 +124,23 @@ const LabInfoSchema = new mongoose.Schema({
   slotCapacities: { type: mongoose.Schema.Types.Mixed, default: {} },
 });
 
+const FestivalOfferSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  generalDiscountPercent: { type: Number, required: true },
+  testDiscounts: { type: mongoose.Schema.Types.Mixed, default: {} },
+  startsAt: { type: String, required: true },
+  endsAt: { type: String, required: true },
+  posterUpdatedAt: { type: String, default: null },
+  updatedAt: { type: String, required: true },
+}, { minimize: false });
+
+// Kept out of the main sync and load, so a large image never slows other requests
+const OfferPosterSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  contentType: { type: String, required: true },
+  data: { type: Buffer, required: true },
+});
+
 // 2. MODELS (compiled or reused)
 export const MongoUser = mongoose.models.User || mongoose.model('User', UserSchema);
 export const MongoPassword = mongoose.models.Password || mongoose.model('Password', PasswordSchema);
@@ -125,6 +148,8 @@ export const MongoBloodTest = mongoose.models.BloodTest || mongoose.model('Blood
 export const MongoBooking = mongoose.models.Booking || mongoose.model('Booking', BookingSchema);
 export const MongoPatientReport = mongoose.models.PatientReport || mongoose.model('PatientReport', PatientReportSchema);
 export const MongoLabInfo = mongoose.models.LabInfo || mongoose.model('LabInfo', LabInfoSchema);
+export const MongoFestivalOffer = mongoose.models.FestivalOffer || mongoose.model('FestivalOffer', FestivalOfferSchema);
+export const MongoOfferPoster = mongoose.models.OfferPoster || mongoose.model('OfferPoster', OfferPosterSchema);
 
 let isConnected = false;
 let _localDbCache: LocalDatabase | null = null;
@@ -186,6 +211,7 @@ export async function fetchMongoDatabase(): Promise<LocalDatabase | null> {
     const bookings = await (MongoBooking as any).find({}).lean();
     const reports = await (MongoPatientReport as any).find({}).lean();
     const labInfoDoc = await (MongoLabInfo as any).findOne({}).lean();
+    const offerDoc = await (MongoFestivalOffer as any).findOne({}).lean();
 
     // Reconstruct passwords record object
     const passwords: Record<string, string> = {};
@@ -207,6 +233,7 @@ export async function fetchMongoDatabase(): Promise<LocalDatabase | null> {
       bookings: cleanDocs(bookings) as Booking[],
       reports: cleanDocs(reports) as PatientReport[],
       labInfo: normalizedLabInfo,
+      offer: offerDoc ? (({ _id, __v, ...rest }) => rest)(offerDoc) as FestivalOffer : null,
     };
   } catch (error) {
     console.error('MongoDB: Error fetching items:', error);
@@ -305,6 +332,13 @@ export async function syncMongoDatabase(data: LocalDatabase): Promise<void> {
         { upsert: true }
       );
     }
+
+    // 7. Sync Festival Offer
+    if (data.offer) {
+      await (MongoFestivalOffer as any).replaceOne({}, data.offer, { upsert: true });
+    } else {
+      await MongoFestivalOffer.deleteMany({});
+    }
   } catch (error) {
     console.error('MongoDB: Error syncing to MongoDB:', error);
   }
@@ -319,7 +353,8 @@ export function readDb(): LocalDatabase {
       tests: [],
       bookings: [],
       reports: [],
-      labInfo: DEFAULT_LAB_INFO
+      labInfo: DEFAULT_LAB_INFO,
+      offer: null
     };
     
     // Create Default Admin and User
@@ -447,6 +482,7 @@ export function readDb(): LocalDatabase {
     labInfo: fileData.labInfo && typeof fileData.labInfo === 'object'
       ? { ...DEFAULT_LAB_INFO, ...(fileData.labInfo as Partial<LabInfo>), frozenSlots: Array.isArray((fileData.labInfo as any).frozenSlots) ? (fileData.labInfo as any).frozenSlots : [] }
       : DEFAULT_LAB_INFO,
+    offer: fileData.offer && typeof fileData.offer === 'object' ? fileData.offer : null,
   };
   _localDbCache = normalizedData;
   return _localDbCache!;
@@ -462,6 +498,37 @@ export function writeDb(data: LocalDatabase) {
       console.error('MongoDB: Background sync failed:', err);
     });
   }
+}
+
+export interface OfferPoster {
+  contentType: string;
+  data: Buffer;
+}
+
+export async function getOfferPoster(): Promise<OfferPoster | null> {
+  if (isConnected) {
+    const doc = await (MongoOfferPoster as any).findOne({ key: 'current' }).lean();
+    return doc ? { contentType: doc.contentType, data: Buffer.from(doc.data.buffer ?? doc.data) } : null;
+  }
+  if (!fs.existsSync(OFFER_POSTER_FILE)) return null;
+  const saved = JSON.parse(fs.readFileSync(OFFER_POSTER_FILE, 'utf-8'));
+  return { contentType: saved.contentType, data: Buffer.from(saved.base64, 'base64') };
+}
+
+export async function saveOfferPoster(poster: OfferPoster): Promise<void> {
+  if (isConnected) {
+    await MongoOfferPoster.updateOne({ key: 'current' }, { $set: { ...poster, key: 'current' } }, { upsert: true });
+    return;
+  }
+  fs.writeFileSync(OFFER_POSTER_FILE, JSON.stringify({ contentType: poster.contentType, base64: poster.data.toString('base64') }));
+}
+
+export async function deleteOfferPoster(): Promise<void> {
+  if (isConnected) {
+    await MongoOfferPoster.deleteMany({});
+    return;
+  }
+  if (fs.existsSync(OFFER_POSTER_FILE)) fs.unlinkSync(OFFER_POSTER_FILE);
 }
 
 // Ensure database file is initialized at startup

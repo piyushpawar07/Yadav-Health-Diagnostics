@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { readDbAsync } from '../models/db';
 import { JWT_SECRET } from '../middlewares/authMiddleware';
+import { getActiveOffer, withPricing, toActiveOfferSummary } from '../services/offerService';
 
 export const getTests = async (req: any, res: any) => {
   const db = await readDbAsync();
@@ -24,13 +25,14 @@ export const getTests = async (req: any, res: any) => {
   // Filter to active tests only or provide complete list
   const activeTests = db.tests.filter(t => t.isActive);
   
+  const offer = getActiveOffer(db);
   const mappedTests = activeTests.map(t => {
-    if (isAdmin) return t; // Admins get basePrice
+    if (isAdmin) return withPricing(t, offer); // Admins get basePrice
     const { basePrice, ...rest } = t; // Patients get rest without basePrice
-    return rest;
+    return withPricing(rest as typeof t, offer);
   });
 
-  res.json({ tests: mappedTests });
+  res.json({ tests: mappedTests, activeOffer: toActiveOfferSummary(offer) });
 };
 
 export const getTestById = async (req: any, res: any) => {
@@ -55,10 +57,11 @@ export const getTestById = async (req: any, res: any) => {
     } catch (e) {}
   }
 
+  const offer = getActiveOffer(db);
   if (isAdmin) {
-    res.json({ test });
+    res.json({ test: withPricing(test, offer) });
   } else {
     const { basePrice, ...restWithoutBase } = test;
-    res.json({ test: restWithoutBase });
+    res.json({ test: withPricing(restWithoutBase as typeof test, offer) });
   }
 };

@@ -10,6 +10,14 @@ import {
   getAdminPatients,
   updateAdminLabInfo
 } from '../controllers/adminController';
+import {
+  getAdminOffer,
+  saveAdminOffer,
+  deleteAdminOffer,
+  uploadAdminOfferPoster,
+  deleteAdminOfferPoster,
+  getAdminOfferPoster
+} from '../controllers/offerController';
 import { authenticateToken, requireAdmin } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -36,5 +44,13 @@ router.get('/patients', getAdminPatients);
 
 // Branch Information
 router.put('/lab-info', updateAdminLabInfo);
+
+// Festival Offer and Poster
+router.get('/offer', getAdminOffer);
+router.put('/offer', saveAdminOffer);
+router.delete('/offer', deleteAdminOffer);
+router.get('/offer/poster', getAdminOfferPoster);
+router.put('/offer/poster', uploadAdminOfferPoster);
+router.delete('/offer/poster', deleteAdminOfferPoster);
 
 export default router;

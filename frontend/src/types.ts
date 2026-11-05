@@ -24,6 +24,33 @@ export interface BloodTest {
   reportTime: string;      // e.g., "24 Hours", "12 Hours"
   isActive: boolean;
   createdAt: string;
+  pricing?: TestPricing;   // Added by the API, never stored
+}
+
+// Calculated by the server from the festival offer
+export interface TestPricing {
+  originalPrice: number;
+  discountPercent: number;
+  discountAmount: number;
+  finalPrice: number;
+}
+
+export interface FestivalOffer {
+  name: string;
+  generalDiscountPercent: number;
+  testDiscounts: Record<string, number>; // testId -> percent, overrides the general discount
+  startsAt: string;        // ISO timestamps
+  endsAt: string;
+  posterUpdatedAt: string | null; // null when there is no poster
+  updatedAt: string;
+}
+
+// What patients see about the running offer
+export interface ActiveOfferSummary {
+  name: string;
+  generalDiscountPercent: number;
+  endsAt: string;
+  posterUrl: string | null;
 }
 
 export type BookingStatus = 'pending' | 'confirmed' | 'sample_collected' | 'report_uploaded' | 'completed' | 'cancelled';
@@ -43,10 +70,13 @@ export interface Booking {
   tests: {
     id: string;
     testName: string;
-    sellingPrice: number;
+    sellingPrice: number;   // Price charged, after any discount
     basePrice?: number;     // If fetched by admin
+    originalPrice?: number; // Set when a discount was applied
+    discountPercent?: number;
   }[];
   totalAmount: number;
+  offerName?: string;       // Festival offer applied at booking time
   appointmentDate: string;
   appointmentTime: string;
   status: BookingStatus;

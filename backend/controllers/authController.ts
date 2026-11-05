@@ -47,6 +47,8 @@ export const register = async (req: any, res: any) => {
 
 export const login = async (req: any, res: any) => {
   const { email, password } = req.body;
+  // Which sign-in screen was used. Older clients send nothing, which means the patient screen.
+  const portal = req.body.portal === 'admin' ? 'admin' : 'patient';
   
   if (!email || !password) {
     return res.status(400).json({ error: 'Email/phone and password are required.' });
@@ -82,6 +84,14 @@ export const login = async (req: any, res: any) => {
   const passwordHash = db.passwords[user.id];
   if (!passwordHash || !bcrypt.compareSync(password, passwordHash)) {
     return res.status(401).json({ error: 'Invalid email/phone address or password combination.' });
+  }
+
+  // Checked only after the password matches, so the role of an account is never revealed to a guesser
+  if (user.role === 'admin' && portal !== 'admin') {
+    return res.status(403).json({ error: 'This account cannot sign in here. Please use the staff login.' });
+  }
+  if (user.role !== 'admin' && portal === 'admin') {
+    return res.status(403).json({ error: 'This login is for lab staff only. Please use the patient sign in.' });
   }
 
   const token = jwt.sign(

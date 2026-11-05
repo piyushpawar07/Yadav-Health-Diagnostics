@@ -38,9 +38,11 @@ export const updateAdminTest = async (req: any, res: any) => {
   }
 
   const current = db.tests[index];
+  // Prices shown to patients are calculated by the offer service and must never be stored
+  const { pricing, id, ...changes } = req.body;
   const updatedValue: BloodTest = {
     ...current,
-    ...req.body,
+    ...changes,
     // Cast explicitly
     basePrice: req.body.basePrice !== undefined ? Number(req.body.basePrice) : current.basePrice,
     sellingPrice: req.body.sellingPrice !== undefined ? Number(req.body.sellingPrice) : current.sellingPrice,

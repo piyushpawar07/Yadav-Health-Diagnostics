@@ -464,6 +464,21 @@
     "longitude": 74.330703,
     "openingHours": "Mon - Sat: 08:00 AM - 08:00 PM",
     "phone": "+91 9096968140",
-    "updatedAt": "2026-11-01T10:10:34.446Z"
+    "updatedAt": "2026-11-05T12:28:57.791Z",
+    "slotCapacities": {
+      "08:00 AM - 09:00 AM": 5,
+      "09:00 AM - 11:00 AM": 4
+    }
+  },
+  "offer": {
+    "name": "Diwali Offer",
+    "generalDiscountPercent": 10,
+    "testDiscounts": {
+      "t1": 0.05
+    },
+    "startsAt": "2026-11-04T19:30:00.000Z",
+    "endsAt": "2026-11-12T06:30:00.000Z",
+    "posterUpdatedAt": "2026-11-05T12:09:43.103Z",
+    "updatedAt": "2026-11-05T12:09:28.776Z"
   }
 }

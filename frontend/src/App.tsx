@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity, Search, ShoppingCart, Calendar, FileText, MapPin, 
@@ -8,14 +8,18 @@ import {
   CheckCircle, RefreshCw, Eye, EyeOff, ShieldAlert, Upload, HelpCircle,
   Download, PlusCircle, Heart, Sparkles, Zap, Menu, X
 } from 'lucide-react';
-import { User, BloodTest, Booking, PatientReport, LabInfo } from './types';
+import { User, BloodTest, Booking, PatientReport, LabInfo, ActiveOfferSummary } from './types';
 import TestCard from './components/TestCard';
 import LabMap from './components/LabMap';
 import ReportViewer, { getReportHtmlContent, getBiomarkersForTests } from './components/ReportViewer';
 import AdminTestForm from './components/AdminTestForm';
 import LabLogo from './components/LabLogo';
+import PriceTag, { formatRupees } from './components/PriceTag';
+import OfferBanner from './components/OfferBanner';
+import AdminOfferPanel from './components/AdminOfferPanel';
 import { HomeVisitForm, VisitDetailsPanel, VisitDetails } from './components/HomeVisit';
 import axiosClient from './lib/axios';
+import { loadSavedCartIds, saveCartIds } from './lib/cartStorage';
 import { SLOT_TIMES, MAX_SLOT_CAPACITY, getSlotCapacity } from './lib/slots';
 import { findNearbyVisit } from './lib/nearby';
 
@@ -57,7 +61,7 @@ export default function App() {
   const [view, setView] = useState<'home' | 'search' | 'cart' | 'bookings' | 'reports' | 'about' | 'login' | 'register' | 'admin-login' | 'admin-dashboard'>('home');
   
   // Admin selected sub-tab
-  const [adminSubTab, setAdminSubTab] = useState<'orders' | 'tests' | 'analytics' | 'location' | 'patients'>('orders');
+  const [adminSubTab, setAdminSubTab] = useState<'orders' | 'tests' | 'offers' | 'analytics' | 'location' | 'patients'>('orders');
 
   // Slots availability state
   const [slotsAvailability, setSlotsAvailability] = useState<{timeSlot: string; bookedCount: number; maxSlots: number; remainingSlots: number}[]>([]);
@@ -141,6 +145,22 @@ export default function App() {
   const [activeTest, setActiveTest] = useState<BloodTest | null>(null);
   const [labInfo, setLabInfo] = useState<LabInfo | null>(null);
   const [cart, setCart] = useState<BloodTest[]>([]);
+  const cartOwnerId = useRef<string | null>(null); // Patient whose saved cart has been restored
+
+  // Restore a patient's saved cart after login or reload, keeping anything added as a guest
+  useEffect(() => {
+    if (!user || user.role === 'admin' || tests.length === 0 || cartOwnerId.current === user.id) return;
+    const savedTests = loadSavedCartIds(user.id)
+      .map(id => tests.find(t => t.id === id))
+      .filter((t): t is BloodTest => !!t);
+    setCart(current => [...savedTests, ...current.filter(c => !savedTests.some(t => t.id === c.id))]);
+    cartOwnerId.current = user.id;
+  }, [user, tests]);
+
+  // Save after every change, but only once the patient's cart has been restored
+  useEffect(() => {
+    if (user && cartOwnerId.current === user.id) saveCartIds(user.id, cart.map(t => t.id));
+  }, [cart, user]);
   
   // Booking / Reports States
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
@@ -254,17 +274,29 @@ export default function App() {
     }
   };
 
-  const handleSetSlotCapacity = async (slotKey: string, capacity: number) => {
+  // Show slot changes at once and save after the admin stops tapping, because a save can take seconds
+  const SLOT_SAVE_DELAY_MS = 500;
+  const slotSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const latestSlotChange = useRef(0);
+
+  const handleSetSlotCapacity = (slotKey: string, capacity: number) => {
     if (!labInfo) return;
-    try {
-      const res = await axiosClient.put('/api/admin/lab-info', {
-        ...labInfo,
-        slotCapacities: { ...labInfo.slotCapacities, [slotKey]: capacity }
-      });
-      setLabInfo(res.data.labInfo);
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to update slots');
-    }
+    const updated = { ...labInfo, slotCapacities: { ...labInfo.slotCapacities, [slotKey]: capacity } };
+    setLabInfo(updated);
+    const changeId = ++latestSlotChange.current;
+
+    clearTimeout(slotSaveTimer.current);
+    slotSaveTimer.current = setTimeout(async () => {
+      try {
+        const res = await axiosClient.put('/api/admin/lab-info', updated);
+        // Ignore replies for older changes, so they never undo a newer tap
+        if (changeId === latestSlotChange.current) setLabInfo(res.data.labInfo);
+      } catch (err: any) {
+        if (changeId !== latestSlotChange.current) return;
+        alert(err.response?.data?.error || 'Failed to update slots');
+        fetchTestsAndLabInfo(); // Show the values that were really saved
+      }
+    }, SLOT_SAVE_DELAY_MS);
   };
 
   // Booking details form
@@ -291,6 +323,8 @@ export default function App() {
   }, [view]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<Booking | null>(null);
+  const [bookingPriceChanged, setBookingPriceChanged] = useState(false);
+  const [activeOffer, setActiveOffer] = useState<ActiveOfferSummary | null>(null);
   const [lockDate, setLockDate] = useState<string>('');
 
   // Helper to generate next 7 days for the interactive slot calendar
@@ -353,6 +387,7 @@ export default function App() {
     try {
       const testsRes = await axiosClient.get('/api/tests');
       setTests(testsRes.data.tests);
+      setActiveOffer(testsRes.data.activeOffer ?? null);
       
       const labRes = await axiosClient.get('/api/lab-info');
       setLabInfo(labRes.data.labInfo);
@@ -456,7 +491,8 @@ export default function App() {
     try {
       const res = await axiosClient.post('/api/auth/login', {
         email: credentials.email,
-        password: credentials.pass
+        password: credentials.pass,
+        portal: forceAdmin ? 'admin' : 'patient'
       });
 
       const data = res.data;
@@ -572,6 +608,7 @@ export default function App() {
 
   const handleLogOut = () => {
     localStorage.removeItem('yadav_diagnostics_token');
+    cartOwnerId.current = null; // The saved cart stays in storage for this patient's next login
     setToken(null);
     setUser(null);
     setCart([]);
@@ -590,8 +627,16 @@ export default function App() {
     setCart(cart.filter(item => item.id !== testId));
   };
 
+  // Cart items keep the price they had when added, so read the latest server pricing
+  const getCurrentTest = (test: BloodTest) => tests.find(t => t.id === test.id) ?? test;
+  const getPayablePrice = (test: BloodTest) => getCurrentTest(test).pricing?.finalPrice ?? test.sellingPrice;
+
   const getCartTotal = () => {
-    return cart.reduce((acc, current) => acc + current.sellingPrice, 0);
+    return cart.reduce((acc, current) => acc + getPayablePrice(current), 0);
+  };
+
+  const getCartSavings = () => {
+    return cart.reduce((acc, current) => acc + (getCurrentTest(current).pricing?.discountAmount ?? 0), 0);
   };
 
   // Appointment Submission
@@ -644,7 +689,9 @@ export default function App() {
       });
 
       const data = res.data;
+      setBookingPriceChanged(data.booking.totalAmount !== getCartTotal());
       setBookingSuccess(data.booking);
+      fetchTestsAndLabInfo();
       setVisitDetails(d => ({ ...d, visitLocation: null }));
       setAppointmentTime('');
       setCart([]);
@@ -1038,6 +1085,8 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="space-y-16"
             >
+              {activeOffer && <OfferBanner offer={activeOffer} onBrowse={() => setView('search')} />}
+
               {/* Hero showcase */}
               <div className="relative pt-8 pb-12 flex flex-col md:flex-row items-center gap-12 border-b border-slate-900/40">
                 <div className="flex-1 space-y-6">
@@ -1575,7 +1624,7 @@ export default function App() {
                         <div className="space-y-1">
                           <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider inline-block">{item.category}</span>
                           <h4 className="font-bold text-sm text-slate-200">{item.testName}</h4>
-                          <p className="text-xs text-emerald-400 font-mono font-semibold">₹{item.sellingPrice}</p>
+                          <PriceTag pricing={getCurrentTest(item).pricing} price={item.sellingPrice} size="sm" />
                         </div>
                         <button
                           onClick={() => handleRemoveFromCart(item.id)}
@@ -1586,6 +1635,12 @@ export default function App() {
                       </div>
                     ))}
 
+                    {getCartSavings() > 0 && (
+                      <div className="flex justify-between items-center px-4 pt-4 border-t border-slate-900 text-sm font-semibold text-amber-300">
+                        <span>Festival offer savings</span>
+                        <span className="font-mono">-{formatRupees(getCartSavings())}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center p-4 border-t border-slate-900 font-bold text-slate-200">
                       <span>Total Lab Charge Due</span>
                       <span className="text-xl text-emerald-400 font-mono">₹{getCartTotal()}</span>
@@ -1881,7 +1936,11 @@ export default function App() {
                             {b.tests.map((t, idx) => (
                               <li key={idx} className="flex items-center gap-2">
                                 <FlaskConical className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                                <span>{t.testName} (₹{t.sellingPrice})</span>
+                                <span>
+                                  {t.testName} ({t.originalPrice !== undefined && t.originalPrice > t.sellingPrice && (
+                                    <span className="line-through text-slate-500 mr-1">₹{t.originalPrice}</span>
+                                  )}₹{t.sellingPrice})
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -1890,6 +1949,7 @@ export default function App() {
                         <div className="text-left md:text-right">
                           <p className="text-[9px] text-slate-550 uppercase tracking-widest font-mono">Invoice Amount</p>
                           <p className="text-lg font-bold text-emerald-400 font-mono">₹{b.totalAmount}</p>
+                          {b.offerName && <p className="text-[10px] text-amber-300 font-semibold">{b.offerName} applied</p>}
                         </div>
                       </div>
 
@@ -2785,7 +2845,7 @@ export default function App() {
                   </div>
 
                   {/* PRIMARY VIEWPORTS COLLAPSIBLE TABS (MANAGEMENT AREA) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 border-b border-slate-900 pb-3 w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-2 border-b border-slate-900 pb-3 w-full">
                     <button
                       onClick={() => setAdminSubTab('orders')}
                       className={`px-4 py-2.5 text-xs font-extrabold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 w-full ${
@@ -2844,6 +2904,18 @@ export default function App() {
                     >
                       <Users className="h-3.5 w-3.5" />
                       <span>Patients Directory</span>
+                    </button>
+
+                    <button
+                      onClick={() => setAdminSubTab('offers')}
+                      className={`px-4 py-2.5 text-xs font-extrabold rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 w-full ${
+                        adminSubTab === 'offers'
+                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-850'
+                      }`}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Festival Offers</span>
                     </button>
                   </div>
 
@@ -3305,6 +3377,9 @@ export default function App() {
                                    <div className="text-right font-mono text-[11px] space-y-0.5">
                                      <p className="text-slate-500">Base Cost: <strong className="text-slate-350">₹{t.basePrice}</strong></p>
                                      <p className="text-emerald-400 font-extrabold text-xs">Offer Fee: ₹{t.sellingPrice}</p>
+                                     {!!t.pricing?.discountPercent && (
+                                       <p className="text-amber-300 text-[10px] font-semibold">Festival price: ₹{t.pricing.finalPrice} ({t.pricing.discountPercent}% off)</p>
+                                     )}
                                      <p className="text-teal-400 text-[10px] font-semibold">Profit: ₹{t.sellingPrice - t.basePrice}</p>
                                    </div>
 
@@ -3656,6 +3731,10 @@ export default function App() {
                     )}
 
                     {/* 5. REGISTERED PATIENTS DIRECTORY */}
+                    {adminSubTab === 'offers' && (
+                      <AdminOfferPanel tests={tests} onOfferChanged={fetchTestsAndLabInfo} />
+                    )}
+
                     {adminSubTab === 'patients' && (
                       <div className="bg-slate-900 border border-slate-800/80 p-6 rounded-2xl shadow-xl w-full space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -3711,6 +3790,9 @@ export default function App() {
             <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto" />
             <h3 id="booking-success-title" className="mt-3 text-lg font-extrabold text-slate-100">Your Slot Is Booked!</h3>
             <p className="mt-1 text-xs text-slate-400">Our team will contact you if anything is needed.</p>
+            {bookingPriceChanged && (
+              <p className="mt-2 text-xs text-amber-300">Prices changed while you were booking, for example because an offer ended. The total below is the price charged.</p>
+            )}
 
             <div className="mt-5 space-y-2 text-left text-xs bg-slate-950/50 border border-slate-800 rounded-xl p-4">
               <p className="text-slate-300"><span className="text-slate-500">Tests: </span>{bookingSuccess.tests.map(t => t.testName).join(', ')}</p>
@@ -3720,12 +3802,18 @@ export default function App() {
               {bookingSuccess.visitAddress && (
                 <p className="text-slate-300"><span className="text-slate-500">Address: </span>{bookingSuccess.visitAddress}, {bookingSuccess.visitArea} - {bookingSuccess.visitPincode}</p>
               )}
+              {(() => {
+                const savings = bookingSuccess.tests.reduce((acc, t) => acc + ((t.originalPrice ?? t.sellingPrice) - t.sellingPrice), 0);
+                return savings > 0 && (
+                  <p className="text-amber-300"><span className="text-slate-500">{bookingSuccess.offerName} savings: </span>-{formatRupees(savings)}</p>
+                );
+              })()}
               <p className="text-slate-300"><span className="text-slate-500">Total: </span>₹{bookingSuccess.totalAmount}</p>
             </div>
 
             <button
               type="button"
-              onClick={() => setBookingSuccess(null)}
+              onClick={() => { setBookingSuccess(null); setBookingPriceChanged(false); }}
               className="mt-5 w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl transition cursor-pointer"
             >
               OK
@@ -3776,7 +3864,7 @@ export default function App() {
               <div className="flex items-center justify-between border-t border-slate-900 pt-4">
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Procedure Pricing</p>
-                  <span className="text-2xl font-black text-emerald-400 font-mono">₹{activeTest.sellingPrice}</span>
+                  <PriceTag pricing={getCurrentTest(activeTest).pricing} price={activeTest.sellingPrice} size="lg" />
                 </div>
 
                 {user?.role !== 'admin' && (
